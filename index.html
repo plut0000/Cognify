@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognify — Think it. Know it.</title>
+<style>
+  :root{
+    --black:#000;
+    --white:#fff;
+    --ink:#f5f5f7;
+    --gray:#86868b;
+    --gray-dk:#6e6e73;
+    --acid:#2997ff;
+    --acid-dk:#0071e3;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--black);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    letter-spacing:-.01em;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;height:52px;
+    background:rgba(0,0,0,.55);backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid rgba(255,255,255,.08)}
+  .nav-in{max-width:1080px;margin:0 auto;height:100%;padding:0 22px;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:19px;letter-spacing:-.02em}
+  .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--acid);box-shadow:0 0 14px var(--acid)}
+  .nav-r{display:flex;gap:26px;align-items:center}
+  .nav-r a{color:var(--ink);opacity:.85;text-decoration:none;font-size:13.5px;font-weight:400;transition:opacity .2s}
+  .nav-r a:hover{opacity:1}
+  .nav-buy{background:var(--acid);color:#fff;padding:6px 15px;border-radius:100px;font-weight:500;font-size:13px}
+  @media(max-width:640px){.nav-r a:not(.nav-buy){display:none}}
+
+  /* generic reveal */
+  .up{opacity:0;transform:translateY(34px);transition:opacity .6s var(--ease),transform .7s var(--ease)}
+  .up.in{opacity:1;transform:none}
+  .up.d1{transition-delay:.06s}.up.d2{transition-delay:.12s}.up.d3{transition-delay:.18s}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:90px 22px 0;position:relative;
+    background:radial-gradient(900px 620px at 50% -8%, rgba(41,151,255,.20), transparent 62%)}
+  .eyebrow{color:var(--acid);font-size:21px;font-weight:600;margin-bottom:6px}
+  .hero h1{font-size:clamp(54px,11vw,120px);font-weight:700;line-height:1;letter-spacing:-.04em;
+    background:linear-gradient(180deg,#fff 25%,#9fc4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lead{color:var(--gray);font-size:clamp(19px,2.6vw,26px);font-weight:400;margin-top:22px;max-width:24ch}
+  .hero .links{margin-top:26px;display:flex;gap:26px;font-size:19px}
+  .hero .links a{color:var(--acid);text-decoration:none;font-weight:500}
+  .hero .links a:hover{text-decoration:underline}
+  .scroll-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);width:22px;height:34px;border:2px solid rgba(255,255,255,.3);border-radius:14px}
+  .scroll-hint::after{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);width:3px;height:7px;border-radius:3px;background:rgba(255,255,255,.6);animation:wheel 1.6s infinite}
+  @keyframes wheel{0%{opacity:0;transform:translate(-50%,0)}30%{opacity:1}100%{opacity:0;transform:translate(-50%,10px)}}
+
+  /* PIN-SCRUB product scale */
+  .pin{height:175vh;position:relative}
+  .pin-sticky{position:sticky;top:0;height:100vh;display:grid;place-items:center;overflow:hidden}
+  .device{
+    width:min(880px,92vw);aspect-ratio:16/10;border-radius:26px;
+    background:linear-gradient(160deg,#16161a,#0c0c0e);
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 40px 120px rgba(0,0,0,.6);
+    transform:scale(var(--s,.55));transition:transform .05s linear;
+    padding:26px;display:flex;flex-direction:column;gap:14px;will-change:transform}
+  .dev-top{display:flex;gap:7px}
+  .dev-top i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.18)}
+  .dev-top i:first-child{background:var(--acid)}
+  .bar{height:13px;border-radius:7px;background:rgba(255,255,255,.09)}
+  .bar.a{background:var(--acid);box-shadow:0 0 18px rgba(41,151,255,.4)}
+  .dev-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;margin-top:6px}
+  .dev-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .pin-caption{position:absolute;top:9vh;left:0;right:0;text-align:center;opacity:var(--cap,1);transition:opacity .1s linear}
+  .pin-caption h2{font-size:clamp(30px,5vw,56px);font-weight:700;letter-spacing:-.03em}
+  .pin-caption p{color:var(--gray);font-size:clamp(16px,2vw,21px);margin-top:8px}
+
+  /* STATEMENT */
+  .statement{padding:14vh 22px;text-align:center}
+  .statement h2{font-size:clamp(34px,6.2vw,76px);font-weight:700;line-height:1.06;letter-spacing:-.03em;max-width:18ch;margin:0 auto}
+  .statement h2 .g{color:var(--gray-dk)}
+  .statement h2 .acid{color:var(--acid)}
+
+  /* FEATURE SPOTLIGHT (alternating) */
+  .spot{padding:12vh 22px;text-align:center}
+  .spot .kick{color:var(--acid);font-weight:600;font-size:16px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+  .spot h3{font-size:clamp(36px,6vw,68px);font-weight:700;letter-spacing:-.03em;line-height:1.02}
+  .spot p{color:var(--gray);font-size:clamp(18px,2.4vw,24px);max-width:30ch;margin:20px auto 0;font-weight:400}
+  .spot.light{background:var(--white);color:#1d1d1f}
+  .spot.light p{color:var(--gray-dk)}
+  .spot.light .kick{color:var(--acid-dk)}
+  .mock{margin:44px auto 0;width:min(720px,92vw);border-radius:22px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.1);background:linear-gradient(160deg,#141418,#0b0b0d);padding:24px}
+  .spot.light .mock{border-color:#e5e5e7;background:linear-gradient(160deg,#fafafa,#f0f0f2)}
+  .mrow{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .mrow:last-child{margin-bottom:0}
+  .mdot{width:34px;height:34px;border-radius:10px;background:rgba(41,151,255,.15);flex-shrink:0;display:grid;place-items:center;font-size:17px}
+  .mbar{height:11px;border-radius:6px;background:rgba(255,255,255,.1);flex:1}
+  .spot.light .mbar{background:#e4e4e7}
+  .mbar.a{background:var(--acid)}
+
+  /* HORIZONTAL GALLERY */
+  .gallery-head{padding:11vh 22px 5vh;text-align:center}
+  .gallery-head h2{font-size:clamp(32px,5vw,56px);font-weight:700;letter-spacing:-.03em}
+  .gallery{display:flex;gap:20px;overflow-x:auto;padding:0 22px 70px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .gallery::-webkit-scrollbar{height:0}
+  .gcard{scroll-snap-align:center;flex:0 0 min(360px,80vw);height:440px;border-radius:24px;
+    padding:30px;display:flex;flex-direction:column;justify-content:flex-end;
+    border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#101014,#1a1a20)}
+  .gcard .em{font-size:42px;position:absolute;top:28px;left:30px}
+  .gcard h4{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+  .gcard p{color:var(--gray);font-size:16px}
+  .gcard.lime{background:linear-gradient(180deg,#04203f,#063a6e);border-color:rgba(41,151,255,.4)}
+  .gcard.lime h4,.gcard.lime .em{color:var(--acid)}
+
+  /* SPECS */
+  .specs{padding:12vh 22px;text-align:center}
+  .specs h2{font-size:clamp(30px,4.5vw,52px);font-weight:700;letter-spacing:-.03em;margin-bottom:60px}
+  .spec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:50px 30px;max-width:880px;margin:0 auto}
+  @media(max-width:640px){.spec-grid{grid-template-columns:1fr 1fr;gap:46px 20px}}
+  .spec .n{font-size:clamp(42px,7vw,68px);font-weight:700;letter-spacing:-.03em;
+    background:linear-gradient(180deg,var(--acid),var(--acid-dk));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .spec .l{color:var(--gray);font-size:15px;margin-top:6px}
+
+  /* CTA */
+  .cta{padding:14vh 22px;text-align:center;background:radial-gradient(800px 500px at 50% 120%, rgba(41,151,255,.18), transparent 60%)}
+  .cta h2{font-size:clamp(40px,8vw,92px);font-weight:700;letter-spacing:-.04em;line-height:.98;
+    background:linear-gradient(180deg,#fff,#7fb0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .cta .btns{margin-top:34px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .pill-btn{padding:14px 30px;border-radius:100px;font-size:17px;font-weight:500;text-decoration:none;transition:transform .25s var(--ease)}
+  .pill-btn.primary{background:var(--acid);color:#fff}
+  .pill-btn.primary:hover{transform:scale(1.05)}
+  .pill-btn.sec{border:1px solid rgba(255,255,255,.25);color:var(--ink)}
+  .pill-btn.sec:hover{border-color:#fff}
+
+  footer{border-top:1px solid rgba(255,255,255,.1);padding:42px 22px;color:var(--gray-dk);font-size:12.5px;line-height:1.8}
+  .foot-in{max-width:1080px;margin:0 auto}
+  .foot-in a{color:var(--gray);text-decoration:none}
+  .foot-in a:hover{text-decoration:underline}
+  .foot-top{display:flex;gap:30px;flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:18px}
+  /* ---- interactive tools ---- */
+  .tool{margin:40px auto 0;width:min(640px,92vw);text-align:left}
+  .tool-btn,.composer button{font-family:inherit;font-weight:600;font-size:16px;cursor:pointer;border:none;
+    background:var(--acid);color:#fff;border-radius:100px;padding:13px 26px;transition:transform .2s var(--ease),opacity .2s}
+  .tool-btn:hover,.composer button:hover{transform:scale(1.04)}
+  .tool-btn:disabled,.composer button:disabled{opacity:.5;cursor:wait;transform:none}
+  /* chat */
+  .chat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:18px;
+    height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+  .msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:15.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .msg.bot{background:rgba(255,255,255,.07);border-bottom-left-radius:5px;align-self:flex-start}
+  .msg.me{background:var(--acid);color:#fff;border-bottom-right-radius:5px;align-self:flex-end;font-weight:500}
+  .msg em{color:var(--acid);font-style:normal}
+  .msg.me em{color:#fff}
+  .composer{display:flex;gap:10px}
+  .composer input{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--ink);
+    border-radius:100px;padding:13px 20px;font-family:inherit;font-size:15.5px;outline:none}
+  .composer input:focus{border-color:var(--acid)}
+  /* flashcards */
+  .tool textarea{width:100%;min-height:110px;background:rgba(0,0,0,.04);border:1px solid #d8d8dc;border-radius:16px;
+    padding:16px;font-family:inherit;font-size:15.5px;resize:vertical;outline:none;color:#1d1d1f;margin-bottom:14px}
+  .tool.light textarea:focus{border-color:var(--acid-dk)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:18px}
+  .fcard{height:130px;perspective:1000px;cursor:pointer}
+  .fcard-in{position:relative;width:100%;height:100%;transition:transform .5s var(--ease);transform-style:preserve-3d}
+  .fcard.flip .fcard-in{transform:rotateY(180deg)}
+  .fface{position:absolute;inset:0;backface-visibility:hidden;border-radius:14px;padding:14px;display:grid;place-items:center;
+    text-align:center;font-size:14px;font-weight:600;line-height:1.35}
+  .fface.front{background:#1d1d1f;color:#fff}
+  .fface.back{background:var(--acid);color:#fff;transform:rotateY(180deg);font-weight:500}
+  /* planner */
+  .plan-row{display:flex;gap:10px;flex-wrap:wrap}
+  .plan-row input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--ink);
+    border-radius:12px;padding:13px 16px;font-family:inherit;font-size:15.5px;outline:none}
+  .plan-row input:focus{border-color:var(--acid)}
+  #planTopic{flex:1;min-width:180px}
+  #planDays{width:80px}
+  .plan-out{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+  .plan-day{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-left:3px solid var(--acid);
+    border-radius:12px;padding:14px 16px}
+  .plan-day b{color:var(--acid);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+  .plan-day p{color:var(--gray);font-size:15px;margin-top:4px}
+  .thinking{color:var(--gray);font-size:14px;font-style:italic}
+  .tool.light .thinking{color:var(--gray-dk)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <div class="brand"><span class="dot"></span>Cognify</div>
+    <div class="nav-r">
+      <a href="#statement">Overview</a>
+      <a href="#features">Features</a>
+      <a href="#specs">Results</a>
+      <a href="#buy" class="nav-buy">Get it</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="eyebrow up in">Cognify</div>
+  <h1 class="up in d1">Think it.<br>Know it.</h1>
+  <p class="lead up in d2">The study app that turns your notes into knowledge that actually sticks.</p>
+  <div class="links up in d3">
+    <a href="#buy">Get started ›</a>
+    <a href="#statement">Learn more ›</a>
+  </div>
+  <div class="scroll-hint"></div>
+</section>
+
+<!-- PIN + SCRUB: product scales up as you scroll -->
+<section class="pin" id="overview">
+  <div class="pin-sticky">
+    <div class="pin-caption">
+      <h2>Your whole study setup.</h2>
+      <p>Notes, cards, quizzes, and plans — in one place.</p>
+    </div>
+    <div class="device" id="device">
+      <div class="dev-top"><i></i><i></i><i></i><span style="font-size:11px;color:#6e6e73;margin-left:8px">Cognify</span></div>
+
+      <!-- nav tabs -->
+      <div style="display:flex;gap:6px;margin:10px 0 14px">
+        <div style="background:var(--acid);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600">Dashboard</div>
+        <div style="background:rgba(255,255,255,.07);color:#6e6e73;border-radius:8px;padding:5px 12px;font-size:11px">Flashcards</div>
+        <div style="background:rgba(255,255,255,.07);color:#6e6e73;border-radius:8px;padding:5px 12px;font-size:11px">Quiz</div>
+        <div style="background:rgba(255,255,255,.07);color:#6e6e73;border-radius:8px;padding:5px 12px;font-size:11px">Planner</div>
+      </div>
+
+      <div class="dev-grid">
+        <!-- streak card -->
+        <div class="dev-card" style="background:linear-gradient(135deg,rgba(41,151,255,.18),rgba(41,151,255,.06))">
+          <div style="font-size:10px;color:#86868b;margin-bottom:6px;font-weight:500">STUDY STREAK</div>
+          <div style="font-size:28px;font-weight:700;color:var(--acid);line-height:1">7 🔥</div>
+          <div style="font-size:10px;color:#6e6e73;margin-top:4px">days in a row</div>
+          <div style="display:flex;gap:4px;margin-top:10px">
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--acid)"></div>
+          </div>
+        </div>
+
+        <!-- quiz accuracy -->
+        <div class="dev-card">
+          <div style="font-size:10px;color:#86868b;margin-bottom:6px;font-weight:500">QUIZ ACCURACY</div>
+          <div style="font-size:28px;font-weight:700;color:#fff;line-height:1">92%</div>
+          <div style="font-size:10px;color:#6e6e73;margin-top:4px">Chemistry · last attempt</div>
+          <div style="height:6px;border-radius:6px;background:rgba(255,255,255,.1);margin-top:10px;overflow:hidden">
+            <div style="width:92%;height:100%;background:linear-gradient(90deg,var(--acid),#38bdf8);border-radius:6px"></div>
+          </div>
+        </div>
+
+        <!-- upcoming -->
+        <div class="dev-card">
+          <div style="font-size:10px;color:#86868b;margin-bottom:8px;font-weight:500">UPCOMING</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--acid);flex-shrink:0"></div>
+              <div style="font-size:11px;color:#f5f5f7">Chemistry test <span style="color:#6e6e73">· Fri</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#38bdf8;flex-shrink:0"></div>
+              <div style="font-size:11px;color:#f5f5f7">History essay <span style="color:#6e6e73">· Mon</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#a78bfa;flex-shrink:0"></div>
+              <div style="font-size:11px;color:#f5f5f7">Math quiz <span style="color:#6e6e73">· Tue</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- flashcard progress -->
+        <div class="dev-card" style="background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(167,139,250,.04))">
+          <div style="font-size:10px;color:#86868b;margin-bottom:6px;font-weight:500">FLASHCARDS</div>
+          <div style="font-size:11px;color:#f5f5f7;margin-bottom:8px">Chemistry · Chapter 4</div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:#6e6e73;margin-bottom:4px"><span>Progress</span><span style="color:var(--acid)">18 / 24</span></div>
+          <div style="height:6px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden">
+            <div style="width:75%;height:100%;background:linear-gradient(90deg,#a78bfa,var(--acid));border-radius:6px"></div>
+          </div>
+          <div style="font-size:10px;color:#6e6e73;margin-top:8px">6 cards left to review</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="statement" id="statement">
+  <h2><span class="up">Studying,</span> <span class="g up d1">completely</span> <span class="acid up d2">reimagined.</span></h2>
+</section>
+
+<section class="spot" id="features">
+  <div class="kick up">AI study buddy</div>
+  <h3 class="up d1">Ask anything.<br>Understand everything.</h3>
+  <p class="up d2">Ask anything — concepts, homework, "explain it like I'm 12." Instant answers from your AI tutor.</p>
+  <div class="tool up d2" id="buddy">
+    <div class="chat">
+      <div class="msg bot">Hey! I'm your study buddy 👋 Try asking me <em>"explain ionic vs covalent bonds"</em>.</div>
+      <div class="msg me">What's the difference between mitosis and meiosis?</div>
+      <div class="msg bot">Mitosis makes 2 identical copies of a cell (used for growth). Meiosis makes 4 unique cells with half the DNA (used for reproduction). Easy way to remember: <em>Mitosis = More of the same, Meiosis = Mix it up.</em></div>
+    </div>
+    <div class="composer">
+      <input type="text" placeholder="Live in the full Cognify app →" disabled style="opacity:.5">
+      <button class="btn-primary" style="opacity:.5;cursor:default">Ask</button>
+    </div>
+  </div>
+</section>
+
+<section class="spot light">
+  <div class="kick up">Flashcards</div>
+  <h3 class="up d1">A chapter in.<br>A deck out.</h3>
+  <p class="up d2">Paste your notes. Get a deck of flashcards in seconds. Tap a card to flip it.</p>
+  <div class="tool light up d2" id="flash">
+    <div class="cards">
+      <div class="fcard" onclick="this.classList.toggle('flip')"><div class="fcard-in"><div class="fface front">Ionic bond</div><div class="fface back">Electrons transferred between a metal and non-metal, creating + and − ions</div></div></div>
+      <div class="fcard" onclick="this.classList.toggle('flip')"><div class="fcard-in"><div class="fface front">Covalent bond</div><div class="fface back">Electrons shared between two non-metal atoms</div></div></div>
+      <div class="fcard" onclick="this.classList.toggle('flip')"><div class="fcard-in"><div class="fface front">Mitosis</div><div class="fface back">Cell division producing 2 identical daughter cells — used for growth</div></div></div>
+      <div class="fcard" onclick="this.classList.toggle('flip')"><div class="fcard-in"><div class="fface front">Photosynthesis</div><div class="fface back">Plants convert sunlight + CO₂ + water into glucose and oxygen</div></div></div>
+    </div>
+    <p class="thinking" style="margin-top:14px">👆 Tap any card to flip it · AI card generation available in the full app</p>
+  </div>
+</section>
+
+<section class="spot">
+  <div class="kick up">Study plans</div>
+  <h3 class="up d1">Tell it your<br>test date.</h3>
+  <p class="up d2">Tell it your topic and test date. It maps out exactly what to study each day.</p>
+  <div class="tool up d2" id="planner">
+    <div class="plan-out">
+      <div class="plan-day"><b>Day 1</b><p>Causes of WWI — alliances, militarism, the spark in Sarajevo</p></div>
+      <div class="plan-day"><b>Day 2</b><p>Major fronts, trench warfare, and key battles on the Western Front</p></div>
+      <div class="plan-day"><b>Day 3</b><p>Turning points — US entry, the Hundred Days Offensive, armistice</p></div>
+      <div class="plan-day"><b>Day 4</b><p>Treaty of Versailles and its consequences — full review + flashcards</p></div>
+    </div>
+    <p class="thinking" style="margin-top:14px">📅 Sample plan for WWI · Personalised plans available in the full app</p>
+  </div>
+</section>
+
+<div class="gallery-head"><h2 class="up">Built for every subject.</h2></div>
+<div class="gallery">
+  <div class="gcard lime"><span class="em">🧪</span><h4>Chemistry</h4><p>Bonding, periodic trends, and reactions — broken down.</p></div>
+  <div class="gcard"><span class="em">📜</span><h4>History</h4><p>Timelines and cause-and-effect, mapped clearly.</p></div>
+  <div class="gcard"><span class="em">🗺️</span><h4>Geography</h4><p>Maps, regions, and data you'll actually remember.</p></div>
+  <div class="gcard"><span class="em">🧬</span><h4>Biology</h4><p>Diagrams and systems made simple.</p></div>
+  <div class="gcard"><span class="em">📐</span><h4>Math</h4><p>Step-by-step worked solutions on demand.</p></div>
+</div>
+
+<section class="specs" id="specs">
+  <h2 class="up">The numbers speak.</h2>
+  <div class="spec-grid">
+    <div class="spec up"><div class="n" data-to="2.3" data-suffix="x">0x</div><div class="l">faster revision</div></div>
+    <div class="spec up d1"><div class="n" data-to="92" data-suffix="%">0%</div><div class="l">improved grades</div></div>
+    <div class="spec up d2"><div class="n" data-to="15" data-suffix="m">0m</div><div class="l">to a full study set</div></div>
+    <div class="spec up"><div class="n" data-to="40" data-suffix="k">0k</div><div class="l">cards made</div></div>
+    <div class="spec up d1"><div class="n" data-to="7" data-suffix="-day">0</div><div class="l">avg streak</div></div>
+    <div class="spec up d2"><div class="n" data-to="100" data-suffix="%">0%</div><div class="l">free to start</div></div>
+  </div>
+</section>
+
+<section class="cta" id="buy">
+  <h2 class="up">Study smarter.<br>Starting today.</h2>
+  <div class="btns up d1">
+    <a href="#features" class="pill-btn primary">Try it free</a>
+    <a href="#overview" class="pill-btn sec">Take the tour</a>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-in">
+    <div class="foot-top">
+      <a href="#features">Features</a>
+      <a href="#specs">Results</a>
+      <a href="#buy">Pricing</a>
+      <a href="#">Support</a>
+      <a href="#">About</a>
+    </div>
+    <div>Copyright © 2026 Cognify. All rights reserved. Designed for students who'd rather learn than cram.</div>
+  </div>
+</footer>
+
+<script>
+  /* reveal on scroll */
+  const io = new IntersectionObserver((es)=>{
+    es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.2, rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.up:not(.in)').forEach(el=>io.observe(el));
+
+  /* pin + scrub */
+  const pin = document.querySelector('.pin');
+  const device = document.getElementById('device');
+  const caption = document.querySelector('.pin-caption');
+  let ticking = false;
+  function scrub(){
+    const r = pin.getBoundingClientRect();
+    const total = pin.offsetHeight - window.innerHeight;
+    let p = (-r.top) / total;
+    p = Math.max(0, Math.min(1, p));
+    const scale = Math.min(1, 0.55 + p * 0.55);
+    device.style.setProperty('--s', scale.toFixed(3));
+    caption.style.setProperty('--cap', (1 - Math.min(1, p*1.7)).toFixed(2));
+    ticking = false;
+  }
+  window.addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(scrub);} }, {passive:true});
+  scrub();
+
+  /* count-up stats */
+  function countUp(el){
+    const to = parseFloat(el.dataset.to), sfx = el.dataset.suffix||'';
+    const dec = (to % 1 !== 0) ? 1 : 0;
+    let s=null;
+    function step(t){ if(!s)s=t; const p=Math.min((t-s)/1300,1); const e=1-Math.pow(1-p,3);
+      el.textContent=(to*e).toFixed(dec)+sfx; if(p<1)requestAnimationFrame(step);}
+    requestAnimationFrame(step);
+  }
+  const cio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){countUp(e.target);cio.unobserve(e.target);}}),{threshold:.6});
+  document.querySelectorAll('.spec .n').forEach(el=>cio.observe(el));
+</script>
+</body>
+</html>
