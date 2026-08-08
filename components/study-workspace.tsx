@@ -117,6 +117,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
   const [generatorCount, setGeneratorCount] = useState(10);
   const [generatorFocus, setGeneratorFocus] = useState("");
   const [generatorDifficulty, setGeneratorDifficulty] = useState<QuizSet["difficulty"]>("Standard");
+  const [generatingMaterial, setGeneratingMaterial] = useState(false);
   const [toast, setToast] = useState("");
   const [cardIndex, setCardIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
@@ -307,7 +308,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     setGeneratorDifficulty("Standard");
   };
 
-  const createMaterial = () => {
+  const createMaterial = async () => {
     if (generatorMode === "flashcards") {
       const deck = generateDeck(activeNotebook, { title: generatorTitle, count: generatorCount, focus: generatorFocus });
       updateActiveNotebook((notebook) => ({ ...notebook, flashcardDecks: [deck, ...notebook.flashcardDecks] }));
@@ -317,16 +318,60 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       setCardFlipped(false);
       setReviewedCards([]);
       showToast(`Created “${deck.title}” with ${deck.cards.length} cards`);
-    } else if (generatorMode === "quiz") {
-      const quiz = generateQuiz(activeNotebook, { title: generatorTitle, count: generatorCount, difficulty: generatorDifficulty });
-      updateActiveNotebook((notebook) => ({ ...notebook, quizzes: [quiz, ...notebook.quizzes] }));
-      setSelectedQuizId(quiz.id);
-      setActiveTab("quizzes");
-      setQuizIndex(0);
-      setQuizAnswers({});
-      setQuizComplete(false);
-      showToast(`Created “${quiz.title}” with ${quiz.questions.length} questions`);
+      setGeneratorMode(null);
+      return;
     }
+
+    if (generatorMode !== "quiz" || generatingMaterial) return;
+    setGeneratingMaterial(true);
+
+    let quiz: QuizSet | null = null;
+    let usedGemini = false;
+    try {
+      const response = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: generatorTitle,
+          count: generatorCount,
+          difficulty: generatorDifficulty,
+          notebook: {
+            title: activeNotebook.title,
+            sourceName: activeNotebook.sourceName,
+            summary: activeNotebook.summary,
+            takeaways: activeNotebook.takeaways,
+            keyTerms: activeNotebook.keyTerms,
+            sections: activeNotebook.sections,
+            rawText: activeNotebook.rawText,
+            previousQuestions: activeNotebook.quizzes
+              .flatMap((set) => set.questions.map((question) => question.question))
+              .slice(-80),
+          },
+        }),
+      });
+      const payload = await response.json() as { quiz?: QuizSet };
+      if (response.ok && payload.quiz?.questions?.length === generatorCount) {
+        quiz = payload.quiz;
+        usedGemini = true;
+      }
+    } catch {
+      // The local generator below keeps the study flow working during provider outages.
+    }
+
+    if (!quiz) {
+      quiz = generateQuiz(activeNotebook, { title: generatorTitle, count: generatorCount, difficulty: generatorDifficulty });
+    }
+
+    updateActiveNotebook((notebook) => ({ ...notebook, quizzes: [quiz, ...notebook.quizzes] }));
+    setSelectedQuizId(quiz.id);
+    setActiveTab("quizzes");
+    setQuizIndex(0);
+    setQuizAnswers({});
+    setQuizComplete(false);
+    showToast(usedGemini
+      ? `Gemini created “${quiz.title}” with ${quiz.questions.length} fresh questions`
+      : `Created “${quiz.title}” locally — Gemini was unavailable`);
+    setGeneratingMaterial(false);
     setGeneratorMode(null);
   };
 
@@ -713,7 +758,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       )}
 
       {generatorMode && (
-        <div className="modal-layer" role="presentation" onMouseDown={(event: MouseEvent<HTMLDivElement>) => { if (event.target === event.currentTarget) setGeneratorMode(null); }}>
+        <div className="modal-layer" role="presentation" onMouseDown={(event: MouseEvent<HTMLDivElement>) => { if (!generatingMaterial && event.target === event.currentTarget) setGeneratorMode(null); }}>
           <section className="app-modal generator-modal" role="dialog" aria-modal="true" aria-labelledby="generator-title">
             <div className="modal-header"><div><span className={generatorMode === "quiz" ? "green" : ""}>{generatorMode === "flashcards" ? <Layers3 size={19} /> : <ListChecks size={19} />}</span><div><p>CREATE FROM {activeNotebook.title.toUpperCase()}</p><h2 id="generator-title">New {generatorMode === "flashcards" ? "flashcard deck" : "practice quiz"}</h2></div></div><button onClick={() => setGeneratorMode(null)} aria-label="Close generator"><X size={20} /></button></div>
             <div className="generator-form">
@@ -724,7 +769,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
               </div>
               <div className="generator-preview"><span><Sparkles size={17} /></span><div><strong>A fresh version every time</strong><p>This creates a separate {generatorMode === "flashcards" ? "deck" : "quiz"}; your existing study tools stay in the notebook.</p></div></div>
             </div>
-            <div className="modal-actions"><button onClick={() => setGeneratorMode(null)}>Cancel</button><button className={`generate-button ${generatorMode === "quiz" ? "green" : ""}`} onClick={createMaterial}><WandSparkles size={16} /> Generate {generatorMode === "flashcards" ? "deck" : "quiz"}</button></div>
+            <div className="modal-actions"><button onClick={() => setGeneratorMode(null)} disabled={generatingMaterial}>Cancel</button><button className={`generate-button ${generatorMode === "quiz" ? "green" : ""}`} onClick={() => void createMaterial()} disabled={generatingMaterial}><WandSparkles size={16} /> {generatingMaterial ? "Gemini is writing…" : `Generate ${generatorMode === "flashcards" ? "deck" : "quiz"}`}</button></div>
           </section>
         </div>
       )}
