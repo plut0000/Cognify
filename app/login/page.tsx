@@ -9,7 +9,12 @@ export const metadata = {
 };
 
 export default async function LoginPage() {
-  const session = await auth();
+  const authReady = Boolean(
+    process.env.AUTH_SECRET
+      && process.env.AUTH_GOOGLE_ID
+      && process.env.AUTH_GOOGLE_SECRET,
+  );
+  const session = authReady ? await auth() : null;
   if (session?.user) redirect("/study");
 
   return (
@@ -21,12 +26,22 @@ export default async function LoginPage() {
         <p className="auth-eyebrow">YOUR STUDY SPACE</p>
         <h1 id="sign-in-title">Pick up where you left off.</h1>
         <p className="auth-copy">Sign in with Google to open your private study workspace and keep your AI coach protected.</p>
-        <form action={loginWithGoogle}>
-          <button className="google-button" type="submit">
-            <span className="google-mark" aria-hidden="true">G</span>
-            Continue with Google
-          </button>
-        </form>
+        {authReady ? (
+          <form action={loginWithGoogle}>
+            <button className="google-button" type="submit">
+              <span className="google-mark" aria-hidden="true">G</span>
+              Continue with Google
+            </button>
+          </form>
+        ) : (
+          <>
+            <button className="google-button" type="button" disabled>
+              <span className="google-mark" aria-hidden="true">G</span>
+              Google sign-in needs setup
+            </button>
+            <p className="auth-setup-note">Add the five server environment variables in Vercel, then redeploy this preview.</p>
+          </>
+        )}
         <div className="auth-points">
           <span><Check size={15} /> No password to remember</span>
           <span><LockKeyhole size={15} /> Your Gemini key stays server-side</span>
