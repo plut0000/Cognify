@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   ].join("\n\n");
 
   const configuredModel = process.env.GEMINI_MODEL?.trim();
-  const models = [...new Set([configuredModel, "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"].filter((model): model is string => Boolean(model)))];
+  const models = [...new Set([configuredModel, "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"].filter((model): model is string => Boolean(model)))];
   const requestBody = JSON.stringify({
     systemInstruction: {
       parts: [{
@@ -85,7 +85,6 @@ export async function POST(request: Request) {
     }],
     generationConfig: {
       maxOutputTokens: 700,
-      temperature: 0.4,
     },
   });
 
