@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/favicon.svg" width="84" alt="Cognify logo" />
+  <img src="public/cognify-logo.png" width="112" alt="Cognify logo" />
 </p>
 
 <h1 align="center">Cognify</h1>
