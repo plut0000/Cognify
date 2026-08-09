@@ -1,4 +1,5 @@
-import { ArrowLeft, BookOpenCheck, Check, LockKeyhole, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Check, LockKeyhole } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -21,7 +22,7 @@ export default async function LoginPage() {
     <main className="auth-page">
       <Link className="auth-back" href="/"><ArrowLeft size={17} /> Back home</Link>
       <section className="auth-card" aria-labelledby="sign-in-title">
-        <div className="auth-brand"><span className="logo-glyph"><Sparkles size={21} /></span><strong>Study Focus</strong></div>
+        <div className="auth-brand"><Image className="brand-logo-image auth-logo" src="/cognify-logo.png" alt="" width={34} height={34} priority /><strong>Cognify</strong></div>
         <div className="auth-icon"><BookOpenCheck size={28} /></div>
         <p className="auth-eyebrow">YOUR STUDY SPACE</p>
         <h1 id="sign-in-title">Pick up where you left off.</h1>
@@ -46,7 +47,7 @@ export default async function LoginPage() {
           <span><Check size={15} /> No password to remember</span>
           <span><LockKeyhole size={15} /> Your Gemini key stays server-side</span>
         </div>
-        <p className="auth-legal">By continuing, you agree to use Study Focus for learning and personal study.</p>
+        <p className="auth-legal">By continuing, you agree to use Cognify for learning and personal study.</p>
       </section>
     </main>
   );
