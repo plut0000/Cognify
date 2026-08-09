@@ -38,9 +38,7 @@ import { logout } from "@/app/auth-actions";
 import {
   buildLocalStudyAnswer,
   createSampleNotebook,
-  generateDeck,
   generateNotebook,
-  generateQuiz,
 } from "@/lib/study-engine";
 import type { FlashcardDeck, QuizSet, StudyNotebook } from "@/lib/study-engine";
 
@@ -309,28 +307,74 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
   };
 
   const createMaterial = async () => {
+    if (!generatorMode || generatingMaterial) return;
+    setGeneratingMaterial(true);
+
+    const previousStudyItems = [
+      ...activeNotebook.flashcardDecks.flatMap((deck) => deck.cards.map((card) => ({
+        prompt: card.question,
+        answer: card.answer,
+        explanation: "",
+      }))),
+      ...activeNotebook.quizzes.flatMap((set) => set.questions.map((question) => ({
+        prompt: question.question,
+        answer: question.options[question.correctIndex] ?? "",
+        explanation: question.explanation,
+      }))),
+    ].slice(-160);
+
     if (generatorMode === "flashcards") {
-      const deck = generateDeck(activeNotebook, { title: generatorTitle, count: generatorCount, focus: generatorFocus });
+      let deck: FlashcardDeck;
+      try {
+        const response = await fetch("/api/generate-flashcards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(35_000),
+          body: JSON.stringify({
+            title: generatorTitle,
+            count: generatorCount,
+            focus: generatorFocus,
+            notebook: {
+              title: activeNotebook.title,
+              sourceName: activeNotebook.sourceName,
+              summary: activeNotebook.summary,
+              takeaways: activeNotebook.takeaways,
+              keyTerms: activeNotebook.keyTerms,
+              sections: activeNotebook.sections,
+              rawText: activeNotebook.rawText,
+              previousStudyItems,
+            },
+          }),
+        });
+        const payload = await response.json() as { deck?: FlashcardDeck };
+        if (!response.ok || payload.deck?.cards?.length !== generatorCount) throw new Error("No fresh deck returned");
+        deck = payload.deck;
+      } catch (error) {
+        showToast(error instanceof Error && error.name === "TimeoutError"
+          ? "Gemini took too long. Try 5 cards or a shorter note source."
+          : "Gemini could not find enough unused facts. Try fewer cards, a new focus, or add more notes.");
+        setGeneratingMaterial(false);
+        return;
+      }
+
       updateActiveNotebook((notebook) => ({ ...notebook, flashcardDecks: [deck, ...notebook.flashcardDecks] }));
       setSelectedDeckId(deck.id);
       setActiveTab("flashcards");
       setCardIndex(0);
       setCardFlipped(false);
       setReviewedCards([]);
-      showToast(`Created “${deck.title}” with ${deck.cards.length} cards`);
+      showToast(`Gemini created “${deck.title}” with ${deck.cards.length} fresh facts and answers`);
+      setGeneratingMaterial(false);
       setGeneratorMode(null);
       return;
     }
 
-    if (generatorMode !== "quiz" || generatingMaterial) return;
-    setGeneratingMaterial(true);
-
-    let quiz: QuizSet | null = null;
-    let usedGemini = false;
+    let quiz: QuizSet;
     try {
       const response = await fetch("/api/generate-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(35_000),
         body: JSON.stringify({
           title: generatorTitle,
           count: generatorCount,
@@ -343,23 +387,23 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
             keyTerms: activeNotebook.keyTerms,
             sections: activeNotebook.sections,
             rawText: activeNotebook.rawText,
-            previousQuestions: activeNotebook.quizzes
-              .flatMap((set) => set.questions.map((question) => question.question))
-              .slice(-80),
+            previousQuizItems: previousStudyItems.slice(-120).map((item) => ({
+              question: item.prompt,
+              correctAnswer: item.answer,
+              explanation: item.explanation,
+            })),
           },
         }),
       });
       const payload = await response.json() as { quiz?: QuizSet };
-      if (response.ok && payload.quiz?.questions?.length === generatorCount) {
-        quiz = payload.quiz;
-        usedGemini = true;
-      }
-    } catch {
-      // The local generator below keeps the study flow working during provider outages.
-    }
-
-    if (!quiz) {
-      quiz = generateQuiz(activeNotebook, { title: generatorTitle, count: generatorCount, difficulty: generatorDifficulty });
+      if (!response.ok || payload.quiz?.questions?.length !== generatorCount) throw new Error("No fresh quiz returned");
+      quiz = payload.quiz;
+    } catch (error) {
+      showToast(error instanceof Error && error.name === "TimeoutError"
+        ? "Gemini took too long. Try a 5-question quiz or a shorter note source."
+        : "Gemini could not find enough fresh questions. Try a smaller quiz or add more notes.");
+      setGeneratingMaterial(false);
+      return;
     }
 
     updateActiveNotebook((notebook) => ({ ...notebook, quizzes: [quiz, ...notebook.quizzes] }));
@@ -368,9 +412,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     setQuizIndex(0);
     setQuizAnswers({});
     setQuizComplete(false);
-    showToast(usedGemini
-      ? `Gemini created “${quiz.title}” with ${quiz.questions.length} fresh questions`
-      : `Created “${quiz.title}” locally — Gemini was unavailable`);
+    showToast(`Gemini created “${quiz.title}” with ${quiz.questions.length} fresh questions and answers`);
     setGeneratingMaterial(false);
     setGeneratorMode(null);
   };
