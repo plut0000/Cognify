@@ -32,6 +32,7 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
 import { logout } from "@/app/auth-actions";
@@ -546,8 +547,8 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     <div className="study-shell">
       <aside className={`library-sidebar ${navOpen ? "open" : ""}`}>
         <div className="brand-row">
-          <div className="brand-mark"><span /><span /><span /></div>
-          <div><strong>Study Focus</strong><small>LEARN FROM YOUR NOTES</small></div>
+          <Image className="brand-logo-image sidebar-brand-logo" src="/cognify-logo.png" alt="" width={32} height={32} priority />
+          <div><strong>Cognify</strong><small>LEARN FROM YOUR NOTES</small></div>
           <button className="drawer-close" onClick={() => setNavOpen(false)} aria-label="Close library"><X size={18} /></button>
         </div>
 
