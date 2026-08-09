@@ -3,13 +3,14 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Study Focus — Learn from your own notes",
-    template: "%s · Study Focus",
+    default: "Cognify — Learn from your own notes",
+    template: "%s · Cognify",
   },
   description: "Upload PDFs and class notes, get clear summaries, generate flashcards and quizzes, and study with a source-grounded Gemini coach.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/cognify-logo.png",
+    shortcut: "/cognify-logo.png",
+    apple: "/apple-icon.png",
   },
 };
 
