@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://study-focus-beta.vercel.app"><strong>Try the live app</strong></a>
+  <a href="https://cognify-alpha.vercel.app"><strong>Try the live app</strong></a>
   ·
   <a href="https://github.com/plut0000/Cognify/issues">Report an issue</a>
   ·
