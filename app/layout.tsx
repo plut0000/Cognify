@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  applicationName: "Cognify",
   title: {
     default: "Cognify — Learn from your own notes",
     template: "%s · Cognify",
@@ -11,6 +12,9 @@ export const metadata: Metadata = {
     icon: "/cognify-logo.png",
     shortcut: "/cognify-logo.png",
     apple: "/apple-icon.png",
+  },
+  appleWebApp: {
+    title: "Cognify",
   },
 };
 
