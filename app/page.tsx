@@ -12,7 +12,21 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { auth } from "@/auth";
+import JsonLd from "@/components/json-ld";
+import { absoluteUrl, siteConfig } from "@/lib/site-config";
+
+export const metadata: Metadata = {
+  title: { absolute: "Cognify | Study smarter from your own notes" },
+  description: "Turn PDFs and class notes into clear summaries, flashcards, quizzes, and source-grounded study help with Cognify.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    url: "/",
+    title: "Cognify | Study smarter from your own notes",
+    description: "Turn your own notes into focused summaries, flashcards, quizzes, and source-grounded study help.",
+  },
+};
 
 const steps = [
   {
@@ -36,11 +50,61 @@ const steps = [
 ];
 
 export default async function LandingPage() {
-  const session = await auth();
+  const authReady = Boolean(
+    process.env.AUTH_SECRET
+      && process.env.AUTH_GOOGLE_ID
+      && process.env.AUTH_GOOGLE_SECRET,
+  );
+  const session = authReady ? await auth() : null;
   const primaryHref = session?.user ? "/study" : "/login";
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteConfig.url}/#organization`,
+        name: siteConfig.name,
+        url: siteConfig.url,
+        logo: {
+          "@type": "ImageObject",
+          url: absoluteUrl("/cognify-logo.png"),
+        },
+        sameAs: [siteConfig.githubUrl],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteConfig.url}/#website`,
+        name: siteConfig.name,
+        url: siteConfig.url,
+        description: siteConfig.description,
+        publisher: { "@id": `${siteConfig.url}/#organization` },
+        inLanguage: "en",
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${siteConfig.url}/#software`,
+        name: siteConfig.name,
+        url: siteConfig.url,
+        applicationCategory: "EducationalApplication",
+        applicationSubCategory: "Study tool",
+        operatingSystem: "Web",
+        description: siteConfig.description,
+        isAccessibleForFree: true,
+        featureList: [
+          "PDF and text note import",
+          "Source-based summaries",
+          "Flashcard generation",
+          "Practice quiz generation",
+          "Source-grounded study chat",
+        ],
+        publisher: { "@id": `${siteConfig.url}/#organization` },
+      },
+    ],
+  };
 
   return (
     <main className="landing-page">
+      <JsonLd data={structuredData} />
       <header className="landing-nav">
         <Link className="landing-brand" href="/" aria-label="Cognify home">
           <Image className="brand-logo-image landing-logo" src="/cognify-logo.png" alt="" width={38} height={38} priority />
@@ -49,6 +113,7 @@ export default async function LandingPage() {
         <nav aria-label="Main navigation">
           <a href="#how-it-works">How it works</a>
           <a href="#features">Features</a>
+          <Link href="/about">About</Link>
         </nav>
         <div className="landing-actions">
           {!session?.user && <Link className="nav-login" href="/login">Log in</Link>}
@@ -67,8 +132,8 @@ export default async function LandingPage() {
           </div>
           <div className="hero-trust">
             <span><Check size={14} /> Multiple notebooks</span>
-            <span><Check size={14} /> Unlimited study sets</span>
-            <span><ShieldCheck size={14} /> Private API key</span>
+            <span><Check size={14} /> Multiple study sets</span>
+            <span><ShieldCheck size={14} /> Server-side AI access</span>
           </div>
         </div>
 
@@ -78,7 +143,7 @@ export default async function LandingPage() {
           <div className="showcase-window">
             <div className="showcase-sidebar">
               <Image className="brand-logo-image mini-brand-logo" src="/cognify-logo.png" alt="" width={25} height={25} />
-              <button><span>+</span> New notebook</button>
+              <div className="showcase-new-button"><span>+</span> New notebook</div>
               <small>LIBRARY</small>
               <div className="mini-source active"><FileText size={14} /><span><strong>Cell Biology</strong><small>3 decks · 2 quizzes</small></span></div>
               <div className="mini-source"><FileText size={14} /><span><strong>History Review</strong><small>1 deck · 1 quiz</small></span></div>
@@ -123,7 +188,7 @@ export default async function LandingPage() {
           <li><Sparkles size={18} /><span><strong>Smart summaries</strong><small>See the main ideas before the details.</small></span></li>
           <li><Layers3 size={18} /><span><strong>Multiple flashcard decks</strong><small>Make focused sets for every topic.</small></span></li>
           <li><ListChecks size={18} /><span><strong>Multiple practice quizzes</strong><small>Change length and difficulty each time.</small></span></li>
-          <li><MessageCircle size={18} /><span><strong>Grounded AI coach</strong><small>Answers stay tied to your uploaded notes.</small></span></li>
+          <li><MessageCircle size={18} /><span><strong>Grounded AI coach</strong><small>Answers are designed around your uploaded notes.</small></span></li>
         </ul>
       </section>
 
@@ -133,7 +198,15 @@ export default async function LandingPage() {
         <Link href={primaryHref}>{session?.user ? "Open workspace" : "Start studying"} <ArrowRight size={18} /></Link>
       </section>
 
-      <footer className="landing-footer"><span>© 2026 Cognify</span><span>Powered by Google Gemini · Built for focused learning</span></footer>
+      <footer className="landing-footer">
+        <span>© 2026 Cognify</span>
+        <nav aria-label="Footer navigation">
+          <Link href="/about">About</Link>
+          <Link href="/privacy">Privacy</Link>
+          <a href={siteConfig.githubUrl} rel="noreferrer" target="_blank">Source code</a>
+        </nav>
+        <span>Powered by Google Gemini · Built for focused learning</span>
+      </footer>
     </main>
   );
 }

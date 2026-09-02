@@ -33,14 +33,10 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
 import { logout } from "@/app/auth-actions";
-import {
-  buildLocalStudyAnswer,
-  createSampleNotebook,
-  generateNotebook,
-} from "@/lib/study-engine";
 import type { FlashcardDeck, QuizSet, StudyNotebook } from "@/lib/study-engine";
 
 type WorkspaceTab = "overview" | "notes" | "flashcards" | "quizzes";
@@ -83,6 +79,7 @@ async function extractPdfText(file: File, onProgress: (value: number) => void) {
 }
 
 type StudyWorkspaceProps = {
+  initialNotebook: StudyNotebook;
   user: {
     name: string;
     email: string;
@@ -90,8 +87,7 @@ type StudyWorkspaceProps = {
   };
 };
 
-export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
-  const [initialNotebook] = useState<StudyNotebook>(createSampleNotebook);
+export default function StudyWorkspace({ initialNotebook, user }: StudyWorkspaceProps) {
   const [notebooks, setNotebooks] = useState<StudyNotebook[]>(() => [initialNotebook]);
   const [activeNotebookId, setActiveNotebookId] = useState(initialNotebook.id);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview");
@@ -280,6 +276,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       setProcessingLabel("Building your study workspace");
       setProcessingProgress(86);
       await new Promise((resolve) => window.setTimeout(resolve, 220));
+      const { generateNotebook } = await import("@/lib/study-engine");
       const notebook = generateNotebook(text, sourceName, sourceType, pageCount, notebookTitle);
       setProcessingProgress(100);
       setNotebooks((current) => [notebook, ...current]);
@@ -526,6 +523,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       answer = { text: result.answer, citations: result.citations };
     } catch {
       setChatMode((current) => current === "ai" ? current : "local");
+      const { buildLocalStudyAnswer } = await import("@/lib/study-engine");
       const local = buildLocalStudyAnswer(activeNotebook, question);
       answer = { text: local.text, citations: local.citations };
     }
@@ -547,7 +545,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     <div className="study-shell">
       <aside className={`library-sidebar ${navOpen ? "open" : ""}`}>
         <div className="brand-row">
-          <Image className="brand-logo-image sidebar-brand-logo" src="/cognify-logo.png" alt="" width={32} height={32} priority />
+          <Image className="brand-logo-image sidebar-brand-logo" src="/cognify-logo.png" alt="Cognify logo" width={32} height={32} priority />
           <div><strong>Cognify</strong><small>LEARN FROM YOUR NOTES</small></div>
           <button className="drawer-close" onClick={() => setNavOpen(false)} aria-label="Close library"><X size={18} /></button>
         </div>
@@ -573,13 +571,19 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       <main className="main-workspace">
         <header className="topbar">
           <button className="mobile-control" onClick={() => setNavOpen(true)} aria-label="Open library"><Menu size={19} /></button>
-          <div className="breadcrumbs"><span>My library</span><i>/</i><strong>{activeNotebook.title}</strong></div>
+          <nav className="breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <i aria-hidden="true">/</i>
+            <span>My library</span>
+            <i aria-hidden="true">/</i>
+            <strong aria-current="page">{activeNotebook.title}</strong>
+          </nav>
           <div className="topbar-actions">
             <button className="topbar-help"><CircleHelp size={16} /> <span>How it works</span></button>
             <button className="mobile-control" onClick={() => setChatOpen(true)} aria-label="Open study coach"><MessageCircle size={18} /></button>
             <form action={logout} className="account-form">
               <button className="account-button" type="submit" title={`Sign out ${user.email}`}>
-                {user.image ? <img className="profile-avatar" src={user.image} alt="" referrerPolicy="no-referrer" /> : <span className="profile-avatar">{initials}</span>}
+                {user.image ? <Image className="profile-avatar" src={user.image} alt={`${user.name}'s profile picture`} width={30} height={30} referrerPolicy="no-referrer" /> : <span className="profile-avatar" aria-label={`${user.name}'s initials`}>{initials}</span>}
                 <span className="account-name">{user.name.split(" ")[0]}</span>
                 <LogOut size={14} />
               </button>
