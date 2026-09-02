@@ -1,0 +1,17 @@
+# Cognify
+
+> Cognify is an open-source web study workspace for turning a learner's own notes and PDFs into summaries, flashcards, quizzes, and source-grounded study help.
+
+## Public pages
+
+- Home: https://cognify-alpha.vercel.app/
+- About and methodology: https://cognify-alpha.vercel.app/about
+- Privacy and data handling: https://cognify-alpha.vercel.app/privacy
+- Source code: https://github.com/plut0000/Cognify
+
+## Important context
+
+- Cognify is an online-only software project, not a physical school or local business.
+- Generated study material should be checked against the learner's original source.
+- Public marketing pages may be indexed. Account, API, sign-in, and private workspace routes should not be indexed.
+- The project is licensed under the MIT License.

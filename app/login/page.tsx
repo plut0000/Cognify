@@ -1,12 +1,22 @@
-import { ArrowLeft, BookOpenCheck, Check, LockKeyhole } from "lucide-react";
+import { BookOpenCheck, Check, LockKeyhole } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { loginWithGoogle } from "@/app/auth-actions";
+import Breadcrumbs from "@/components/breadcrumbs";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Sign in",
+  description: "Sign in to Cognify to open your private study workspace and continue learning from your saved notes.",
+  alternates: { canonical: "/login" },
+  robots: { index: false, follow: false, noarchive: true },
+  openGraph: {
+    url: "/login",
+    title: "Sign in | Cognify",
+    description: "Open your Cognify study workspace with Google sign-in.",
+  },
 };
 
 export default async function LoginPage() {
@@ -20,9 +30,9 @@ export default async function LoginPage() {
 
   return (
     <main className="auth-page">
-      <Link className="auth-back" href="/"><ArrowLeft size={17} /> Back home</Link>
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Sign in", href: "/login" }]} />
       <section className="auth-card" aria-labelledby="sign-in-title">
-        <div className="auth-brand"><Image className="brand-logo-image auth-logo" src="/cognify-logo.png" alt="" width={34} height={34} priority /><strong>Cognify</strong></div>
+        <div className="auth-brand"><Image className="brand-logo-image auth-logo" src="/cognify-logo.png" alt="Cognify logo" width={34} height={34} priority /><strong>Cognify</strong></div>
         <div className="auth-icon"><BookOpenCheck size={28} /></div>
         <p className="auth-eyebrow">YOUR STUDY SPACE</p>
         <h1 id="sign-in-title">Pick up where you left off.</h1>
@@ -47,7 +57,7 @@ export default async function LoginPage() {
           <span><Check size={15} /> No password to remember</span>
           <span><LockKeyhole size={15} /> Your Gemini key stays server-side</span>
         </div>
-        <p className="auth-legal">By continuing, you agree to use Cognify for learning and personal study.</p>
+        <p className="auth-legal">By continuing, you agree to use Cognify for learning and personal study. Read the <Link href="/privacy">privacy overview</Link>.</p>
       </section>
     </main>
   );
