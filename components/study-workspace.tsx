@@ -17,10 +17,13 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  Maximize2,
   MessageCircle,
+  Minimize2,
   MoreHorizontal,
   PanelRightClose,
   Plus,
+  Presentation,
   RotateCcw,
   Search,
   Send,
@@ -40,12 +43,20 @@ import {
   buildLocalStudyAnswer,
   createSampleNotebook,
   generateNotebook,
+  generateSlideshow,
 } from "@/lib/study-engine";
-import type { FlashcardDeck, QuizSet, StudyNotebook } from "@/lib/study-engine";
+import type { FlashcardDeck, QuizSet, SlideDeck, StudyNotebook } from "@/lib/study-engine";
 
-type WorkspaceTab = "overview" | "notes" | "flashcards" | "quizzes";
+type WorkspaceTab = "overview" | "notes" | "flashcards" | "quizzes" | "slideshows";
 type UploadMode = "file" | "paste";
-type GeneratorMode = "flashcards" | "quiz" | null;
+type GeneratorMode = "flashcards" | "quiz" | "slideshow" | null;
+
+const normalizeNotebook = (notebook: StudyNotebook): StudyNotebook => ({
+  ...notebook,
+  flashcardDecks: notebook.flashcardDecks ?? [],
+  quizzes: notebook.quizzes ?? [],
+  slideshows: notebook.slideshows ?? [],
+});
 type ChatMode = "checking" | "ai" | "local";
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; citations?: string[] };
 
@@ -97,6 +108,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview");
   const [selectedDeckId, setSelectedDeckId] = useState(initialNotebook.flashcardDecks[0]?.id ?? "");
   const [selectedQuizId, setSelectedQuizId] = useState(initialNotebook.quizzes[0]?.id ?? "");
+  const [selectedSlideshowId, setSelectedSlideshowId] = useState(initialNotebook.slideshows[0]?.id ?? "");
   const [hydrated, setHydrated] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [navOpen, setNavOpen] = useState(false);
@@ -124,6 +136,9 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
   const [quizComplete, setQuizComplete] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [presenting, setPresenting] = useState(false);
+  const [showSlideNotes, setShowSlideNotes] = useState(true);
   const [chatByNotebook, setChatByNotebook] = useState<Record<string, ChatMessage[]>>({});
   const [chatInput, setChatInput] = useState("");
   const [chatThinking, setChatThinking] = useState(false);
@@ -142,11 +157,13 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
         if (saved) {
           const parsed = JSON.parse(saved) as { notebooks?: StudyNotebook[]; activeNotebookId?: string };
           if (Array.isArray(parsed.notebooks) && parsed.notebooks.length) {
-            setNotebooks(parsed.notebooks);
-            const selected = parsed.notebooks.find((item) => item.id === parsed.activeNotebookId) ?? parsed.notebooks[0];
+            const restored = parsed.notebooks.map(normalizeNotebook);
+            setNotebooks(restored);
+            const selected = restored.find((item) => item.id === parsed.activeNotebookId) ?? restored[0];
             setActiveNotebookId(selected.id);
             setSelectedDeckId(selected.flashcardDecks[0]?.id ?? "");
             setSelectedQuizId(selected.quizzes[0]?.id ?? "");
+            setSelectedSlideshowId(selected.slideshows[0]?.id ?? "");
           }
         }
         const savedChats = window.localStorage.getItem(chatStorageKey);
@@ -175,10 +192,13 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
   }, [chatByNotebook, chatThinking]);
 
   const activeNotebook = notebooks.find((item) => item.id === activeNotebookId) ?? notebooks[0];
+  const slideshows = activeNotebook.slideshows ?? [];
   const activeDeck = activeNotebook.flashcardDecks.find((item) => item.id === selectedDeckId) ?? activeNotebook.flashcardDecks[0];
   const activeQuiz = activeNotebook.quizzes.find((item) => item.id === selectedQuizId) ?? activeNotebook.quizzes[0];
+  const activeSlideshow = slideshows.find((item) => item.id === selectedSlideshowId) ?? slideshows[0];
   const activeCard = activeDeck?.cards[Math.min(cardIndex, Math.max(0, activeDeck.cards.length - 1))];
   const activeQuestion = activeQuiz?.questions[Math.min(quizIndex, Math.max(0, activeQuiz.questions.length - 1))];
+  const activeSlide = activeSlideshow?.slides[Math.min(slideIndex, Math.max(0, activeSlideshow.slides.length - 1))];
   const selectedQuizAnswer = activeQuestion ? quizAnswers[activeQuestion.id] : undefined;
   const pastedWordCount = pasteText.trim().split(/\s+/).filter(Boolean).length;
   const chats = chatByNotebook[activeNotebook.id] ?? [];
@@ -199,12 +219,16 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     setQuizIndex(0);
     setQuizAnswers({});
     setQuizComplete(false);
+    setSlideIndex(0);
+    setPresenting(false);
+    setShowSlideNotes(true);
   };
 
   const selectNotebook = (notebook: StudyNotebook) => {
     setActiveNotebookId(notebook.id);
     setSelectedDeckId(notebook.flashcardDecks[0]?.id ?? "");
     setSelectedQuizId(notebook.quizzes[0]?.id ?? "");
+    setSelectedSlideshowId(notebook.slideshows[0]?.id ?? "");
     setActiveTab("overview");
     setNavOpen(false);
     resetPractice();
@@ -212,7 +236,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
 
   const updateActiveNotebook = (updater: (notebook: StudyNotebook) => StudyNotebook) => {
     setNotebooks((current) => current.map((item) => item.id === activeNotebook.id
-      ? { ...updater(item), updatedAt: new Date().toISOString() }
+      ? { ...updater(normalizeNotebook(item)), updatedAt: new Date().toISOString() }
       : item));
   };
 
@@ -286,10 +310,11 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       setActiveNotebookId(notebook.id);
       setSelectedDeckId(notebook.flashcardDecks[0]?.id ?? "");
       setSelectedQuizId(notebook.quizzes[0]?.id ?? "");
+      setSelectedSlideshowId(notebook.slideshows[0]?.id ?? "");
       setActiveTab("overview");
       await new Promise((resolve) => window.setTimeout(resolve, 220));
       closeUpload();
-      showToast(`Notebook ready with ${notebook.flashcardDecks[0]?.cards.length ?? 0} cards and a quiz`);
+      showToast(`Notebook ready with ${notebook.flashcardDecks[0]?.cards.length ?? 0} cards, a quiz, and a slideshow`);
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "We could not read that source. Try another file.");
     } finally {
@@ -302,7 +327,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
   const openGenerator = (mode: Exclude<GeneratorMode, null>) => {
     setGeneratorMode(mode);
     setGeneratorTitle("");
-    setGeneratorCount(mode === "flashcards" ? 10 : 8);
+    setGeneratorCount(mode === "flashcards" ? 10 : mode === "quiz" ? 8 : 8);
     setGeneratorFocus("");
     setGeneratorDifficulty("Standard");
   };
@@ -370,6 +395,64 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       return;
     }
 
+    if (generatorMode === "slideshow") {
+      let deck: SlideDeck;
+      let usedLocalFallback = false;
+      try {
+        const response = await fetch("/api/generate-slideshow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(35_000),
+          body: JSON.stringify({
+            title: generatorTitle,
+            count: generatorCount,
+            focus: generatorFocus,
+            notebook: {
+              title: activeNotebook.title,
+              sourceName: activeNotebook.sourceName,
+              summary: activeNotebook.summary,
+              takeaways: activeNotebook.takeaways,
+              keyTerms: activeNotebook.keyTerms,
+              sections: activeNotebook.sections,
+              rawText: activeNotebook.rawText,
+              previousSlideItems: slideshows.flatMap((set) => set.slides.map((slide) => ({
+                title: slide.title,
+                bullets: slide.bullets.join(" • "),
+                notes: slide.notes,
+              }))).slice(-80),
+            },
+          }),
+        });
+        const payload = await response.json() as { deck?: SlideDeck };
+        if (!response.ok || payload.deck?.slides?.length !== generatorCount) throw new Error("No fresh slideshow returned");
+        deck = payload.deck;
+      } catch (error) {
+        if (error instanceof Error && error.name === "TimeoutError") {
+          showToast("Gemini took too long. Try 6 slides or a shorter note source.");
+          setGeneratingMaterial(false);
+          return;
+        }
+        deck = generateSlideshow(activeNotebook, {
+          title: generatorTitle,
+          count: generatorCount,
+          focus: generatorFocus,
+        });
+        usedLocalFallback = true;
+      }
+
+      updateActiveNotebook((notebook) => ({ ...notebook, slideshows: [deck, ...(notebook.slideshows ?? [])] }));
+      setSelectedSlideshowId(deck.id);
+      setActiveTab("slideshows");
+      setSlideIndex(0);
+      setPresenting(false);
+      showToast(usedLocalFallback
+        ? `Built “${deck.title}” from your notes with ${deck.slides.length} slides`
+        : `Gemini created “${deck.title}” with ${deck.slides.length} grounded slides`);
+      setGeneratingMaterial(false);
+      setGeneratorMode(null);
+      return;
+    }
+
     let quiz: QuizSet;
     try {
       const response = await fetch("/api/generate-quiz", {
@@ -432,6 +515,12 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     setQuizComplete(false);
   };
 
+  const selectSlideshow = (deck: SlideDeck) => {
+    setSelectedSlideshowId(deck.id);
+    setSlideIndex(0);
+    setPresenting(false);
+  };
+
   const removeDeck = (deckId: string) => {
     if (activeNotebook.flashcardDecks.length <= 1) return showToast("Keep at least one deck in the notebook");
     const remaining = activeNotebook.flashcardDecks.filter((deck) => deck.id !== deckId);
@@ -447,6 +536,53 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     if (selectedQuizId === quizId) selectQuiz(remaining[0]);
     showToast("Quiz removed");
   };
+
+  const removeSlideshow = (deckId: string) => {
+    if (slideshows.length === 1) return showToast("Keep at least one slideshow in the notebook");
+    if (!slideshows.length) return;
+    const remaining = slideshows.filter((deck) => deck.id !== deckId);
+    updateActiveNotebook((notebook) => ({ ...notebook, slideshows: remaining }));
+    if (selectedSlideshowId === deckId) selectSlideshow(remaining[0]);
+    showToast("Slideshow removed");
+  };
+
+  const moveSlide = (direction: -1 | 1) => {
+    if (!activeSlideshow?.slides.length) return;
+    setSlideIndex((current) => (current + direction + activeSlideshow.slides.length) % activeSlideshow.slides.length);
+  };
+
+  useEffect(() => {
+    if ((activeTab !== "slideshows" && !presenting) || generatorMode || uploadOpen) return;
+    const slideCount = activeSlideshow?.slides.length ?? 0;
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        if (slideCount) setSlideIndex((current) => (current + 1 + slideCount) % slideCount);
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        if (slideCount) setSlideIndex((current) => (current - 1 + slideCount) % slideCount);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setSlideIndex(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setSlideIndex(Math.max(0, slideCount - 1));
+      } else if ((event.key === "n" || event.key === "N") && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault();
+        setShowSlideNotes((value) => !value);
+      } else if ((event.key === "f" || event.key === "F") && !event.metaKey && !event.ctrlKey && !presenting) {
+        event.preventDefault();
+        setPresenting(true);
+      } else if (event.key === "Escape" && presenting) {
+        event.preventDefault();
+        setPresenting(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeSlideshow?.slides.length, activeTab, generatorMode, presenting, uploadOpen]);
 
   const moveCard = (direction: -1 | 1) => {
     if (!activeDeck) return;
@@ -541,7 +677,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
     }
   };
 
-  const totalMaterials = activeNotebook.flashcardDecks.length + activeNotebook.quizzes.length;
+  const totalMaterials = activeNotebook.flashcardDecks.length + activeNotebook.quizzes.length + slideshows.length;
 
   return (
     <div className="study-shell">
@@ -560,7 +696,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
           {filteredNotebooks.map((notebook) => (
             <button className={`notebook-row ${notebook.id === activeNotebook.id ? "active" : ""}`} key={notebook.id} onClick={() => selectNotebook(notebook)}>
               <span className={`source-glyph ${notebook.sourceType}`}><FileText size={17} /></span>
-              <span><strong>{notebook.title}</strong><small>{notebook.flashcardDecks.length} decks · {notebook.quizzes.length} quizzes</small></span>
+              <span><strong>{notebook.title}</strong><small>{(notebook.flashcardDecks?.length ?? 0)} decks · {(notebook.quizzes?.length ?? 0)} quizzes · {(notebook.slideshows?.length ?? 0)} shows</small></span>
               <MoreHorizontal size={15} />
             </button>
           ))}
@@ -604,11 +740,13 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
             ["notes", BookOpen, "Notes"],
             ["flashcards", Layers3, "Flashcards"],
             ["quizzes", ListChecks, "Quizzes"],
+            ["slideshows", Presentation, "Slideshows"],
           ] as const).map(([value, Icon, label]) => (
             <button className={activeTab === value ? "active" : ""} key={value} onClick={() => setActiveTab(value)}>
               <Icon size={15} /> {label}
               {value === "flashcards" && <span>{activeNotebook.flashcardDecks.length}</span>}
               {value === "quizzes" && <span>{activeNotebook.quizzes.length}</span>}
+              {value === "slideshows" && <span>{slideshows.length}</span>}
             </button>
           ))}
         </nav>
@@ -633,6 +771,7 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
                   <div className="create-choices">
                     <button onClick={() => openGenerator("flashcards")}><span className="choice-icon purple"><Layers3 size={21} /></span><span><strong>Flashcard deck</strong><small>Choose a focus and card count</small></span><Plus size={17} /></button>
                     <button onClick={() => openGenerator("quiz")}><span className="choice-icon green"><ListChecks size={21} /></span><span><strong>Practice quiz</strong><small>Pick length and difficulty</small></span><Plus size={17} /></button>
+                    <button onClick={() => openGenerator("slideshow")}><span className="choice-icon orange"><Presentation size={21} /></span><span><strong>Slideshow</strong><small>Turn notes into a lecture deck</small></span><Plus size={17} /></button>
                   </div>
                 </section>
 
@@ -643,20 +782,27 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
               </div>
 
               <section className="materials-section">
-                <div className="section-title-row"><div><p>YOUR STUDY TOOLS</p><h2>Ready to practice</h2></div><span>{activeNotebook.flashcardDecks.length} decks · {activeNotebook.quizzes.length} quizzes</span></div>
+                <div className="section-title-row"><div><p>YOUR STUDY TOOLS</p><h2>Ready to practice</h2></div><span>{activeNotebook.flashcardDecks.length} decks · {activeNotebook.quizzes.length} quizzes · {slideshows.length} slideshows</span></div>
                 <div className="material-cards">
-                  {activeNotebook.flashcardDecks.slice(0, 3).map((deck) => (
+                  {activeNotebook.flashcardDecks.slice(0, 2).map((deck) => (
                     <button key={deck.id} className="material-card" onClick={() => { selectDeck(deck); setActiveTab("flashcards"); }}>
                       <span className="material-icon cards"><Layers3 size={20} /></span>
                       <span className="material-type">FLASHCARDS</span><strong>{deck.title}</strong><small>{deck.cards.length} cards · {deck.focus}</small>
                       <span className="open-material">Study now <ArrowRight size={14} /></span>
                     </button>
                   ))}
-                  {activeNotebook.quizzes.slice(0, 3).map((quiz) => (
+                  {activeNotebook.quizzes.slice(0, 2).map((quiz) => (
                     <button key={quiz.id} className="material-card" onClick={() => { selectQuiz(quiz); setActiveTab("quizzes"); }}>
                       <span className="material-icon quiz"><ListChecks size={20} /></span>
                       <span className="material-type">{quiz.difficulty.toUpperCase()} QUIZ</span><strong>{quiz.title}</strong><small>{quiz.questions.length} questions{quiz.bestScore !== undefined ? ` · Best ${quiz.bestScore}/${quiz.questions.length}` : ""}</small>
                       <span className="open-material">Start quiz <ArrowRight size={14} /></span>
+                    </button>
+                  ))}
+                  {slideshows.slice(0, 2).map((deck) => (
+                    <button key={deck.id} className="material-card" onClick={() => { selectSlideshow(deck); setActiveTab("slideshows"); }}>
+                      <span className="material-icon slides"><Presentation size={20} /></span>
+                      <span className="material-type">SLIDESHOW</span><strong>{deck.title}</strong><small>{deck.slides.length} slides · {deck.focus}</small>
+                      <span className="open-material">Present now <ArrowRight size={14} /></span>
                     </button>
                   ))}
                 </div>
@@ -756,6 +902,55 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
               </div>
             </div>
           )}
+
+          {activeTab === "slideshows" && (
+            <div className="practice-page">
+              <div className="page-heading"><div><p>SLIDESHOW LIBRARY</p><h2>{activeSlideshow?.title ?? "Slideshows"}</h2><span>{activeSlideshow ? `${activeSlideshow.slides.length} slides · Focus: ${activeSlideshow.focus}` : "Turn this notebook into a lecture deck"}</span></div><button className="accent orange" onClick={() => openGenerator("slideshow")}><Plus size={16} /> New slideshow</button></div>
+              {activeSlideshow && activeSlide ? (
+                <div className="practice-layout">
+                  <aside className="set-list-panel">
+                    <div className="set-list-title"><strong>Your slideshows</strong><span>{slideshows.length}</span></div>
+                    {slideshows.map((deck) => (
+                      <div className={`set-list-row slides-row ${deck.id === activeSlideshow.id ? "active" : ""}`} key={deck.id} role="button" tabIndex={0} onClick={() => selectSlideshow(deck)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") selectSlideshow(deck); }}>
+                        <span><Presentation size={16} /></span><div><strong>{deck.title}</strong><small>{deck.slides.length} slides · {shortDate(deck.createdAt)}</small></div>
+                        <button className="delete-set" onClick={(event) => { event.stopPropagation(); removeSlideshow(deck.id); }} aria-label={`Delete ${deck.title}`}><Trash2 size={14} /></button>
+                      </div>
+                    ))}
+                  </aside>
+                  <section className="slide-practice">
+                    <div className="practice-topline"><span>SLIDE {slideIndex + 1} OF {activeSlideshow.slides.length}</span><span>{activeSlide.kind === "title" ? "Opening" : activeSlide.kind === "recap" ? "Recap" : "Topic"}</span></div>
+                    <article className={`slide-stage ${activeSlide.kind}-slide`} aria-live="polite">
+                      <span className="slide-kicker">{activeSlide.kind === "title" ? "Lecture" : activeSlide.kind === "recap" ? "Close" : `Topic ${String(slideIndex).padStart(2, "0")}`}</span>
+                      <h3>{activeSlide.title}</h3>
+                      {activeSlide.subtitle ? <p className="slide-subtitle">{activeSlide.subtitle}</p> : null}
+                      {activeSlide.bullets.length ? (
+                        <ul>{activeSlide.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
+                      ) : null}
+                    </article>
+                    <div className="card-controls">
+                      <button onClick={() => moveSlide(-1)} aria-label="Previous slide"><ArrowLeft size={18} /></button>
+                      <div className="card-progress" aria-hidden="true"><i style={{ width: `${((slideIndex + 1) / activeSlideshow.slides.length) * 100}%` }} /></div>
+                      <button onClick={() => moveSlide(1)} aria-label="Next slide"><ArrowRight size={18} /></button>
+                    </div>
+                    <div className="slide-toolbar">
+                      <button onClick={() => setShowSlideNotes((value) => !value)} aria-pressed={showSlideNotes}>{showSlideNotes ? "Hide speaker notes" : "Show speaker notes"} <span>N</span></button>
+                      <button className="present-button" onClick={() => setPresenting(true)}><Maximize2 size={16} /> Present <span>F</span></button>
+                    </div>
+                    {showSlideNotes && <div className="slide-notes"><p>SPEAKER NOTES</p><span>{activeSlide.notes}</span></div>}
+                    <p className="slide-keys">Arrow keys or space to move · F to present · Esc to exit</p>
+                  </section>
+                </div>
+              ) : (
+                <div className="empty-slideshow">
+                  <span><Presentation size={28} /></span>
+                  <p>NO SLIDES YET</p>
+                  <h2>Build a deck from these notes.</h2>
+                  <span>Cognify will turn the active notebook into lecture slides without inventing extra facts.</span>
+                  <button className="present-button" onClick={() => openGenerator("slideshow")}><Plus size={16} /> Create slideshow</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
@@ -803,21 +998,50 @@ export default function StudyWorkspace({ user }: StudyWorkspaceProps) {
       {generatorMode && (
         <div className="modal-layer" role="presentation" onMouseDown={(event: MouseEvent<HTMLDivElement>) => { if (!generatingMaterial && event.target === event.currentTarget) setGeneratorMode(null); }}>
           <section className="app-modal generator-modal" role="dialog" aria-modal="true" aria-labelledby="generator-title">
-            <div className="modal-header"><div><span className={generatorMode === "quiz" ? "green" : ""}>{generatorMode === "flashcards" ? <Layers3 size={19} /> : <ListChecks size={19} />}</span><div><p>CREATE FROM {activeNotebook.title.toUpperCase()}</p><h2 id="generator-title">New {generatorMode === "flashcards" ? "flashcard deck" : "practice quiz"}</h2></div></div><button onClick={() => setGeneratorMode(null)} aria-label="Close generator"><X size={20} /></button></div>
+            <div className="modal-header"><div><span className={generatorMode === "quiz" ? "green" : generatorMode === "slideshow" ? "orange" : ""}>{generatorMode === "flashcards" ? <Layers3 size={19} /> : generatorMode === "quiz" ? <ListChecks size={19} /> : <Presentation size={19} />}</span><div><p>CREATE FROM {activeNotebook.title.toUpperCase()}</p><h2 id="generator-title">New {generatorMode === "flashcards" ? "flashcard deck" : generatorMode === "quiz" ? "practice quiz" : "slideshow"}</h2></div></div><button onClick={() => setGeneratorMode(null)} aria-label="Close generator"><X size={20} /></button></div>
             <div className="generator-form">
-              <label className="modal-field"><span>Name <small>optional</small></span><input value={generatorTitle} onChange={(event) => setGeneratorTitle(event.target.value)} placeholder={generatorMode === "flashcards" ? `Flashcards ${activeNotebook.flashcardDecks.length + 1}` : `Practice Quiz ${activeNotebook.quizzes.length + 1}`} maxLength={70} /></label>
+              <label className="modal-field"><span>Name <small>optional</small></span><input value={generatorTitle} onChange={(event) => setGeneratorTitle(event.target.value)} placeholder={generatorMode === "flashcards" ? `Flashcards ${activeNotebook.flashcardDecks.length + 1}` : generatorMode === "quiz" ? `Practice Quiz ${activeNotebook.quizzes.length + 1}` : `Slideshow ${slideshows.length + 1}`} maxLength={70} /></label>
               <div className="generator-grid">
-                <label className="modal-field"><span>{generatorMode === "flashcards" ? "Number of cards" : "Number of questions"}</span><select value={generatorCount} onChange={(event) => setGeneratorCount(Number(event.target.value))}>{[5, 8, 10, 12, 15, 20].map((count) => <option key={count} value={count}>{count}</option>)}</select></label>
+                <label className="modal-field"><span>{generatorMode === "flashcards" ? "Number of cards" : generatorMode === "quiz" ? "Number of questions" : "Number of slides"}</span><select value={generatorCount} onChange={(event) => setGeneratorCount(Number(event.target.value))}>{(generatorMode === "slideshow" ? [6, 8, 10, 12, 15] : [5, 8, 10, 12, 15, 20]).map((count) => <option key={count} value={count}>{count}</option>)}</select></label>
                 {generatorMode === "quiz" ? <label className="modal-field"><span>Difficulty</span><select value={generatorDifficulty} onChange={(event) => setGeneratorDifficulty(event.target.value as QuizSet["difficulty"])}><option>Quick</option><option>Standard</option><option>Challenge</option></select></label> : <label className="modal-field"><span>Focus <small>optional</small></span><input value={generatorFocus} onChange={(event) => setGeneratorFocus(event.target.value)} placeholder="e.g. key terms" /></label>}
               </div>
-              <div className="generator-preview"><span><Sparkles size={17} /></span><div><strong>A fresh version every time</strong><p>This creates a separate {generatorMode === "flashcards" ? "deck" : "quiz"}; your existing study tools stay in the notebook.</p></div></div>
+              <div className="generator-preview"><span><Sparkles size={17} /></span><div><strong>A fresh version every time</strong><p>This creates a separate {generatorMode === "flashcards" ? "deck" : generatorMode === "quiz" ? "quiz" : "slideshow"}; your existing study tools stay in the notebook.</p></div></div>
             </div>
-            <div className="modal-actions"><button onClick={() => setGeneratorMode(null)} disabled={generatingMaterial}>Cancel</button><button className={`generate-button ${generatorMode === "quiz" ? "green" : ""}`} onClick={() => void createMaterial()} disabled={generatingMaterial}><WandSparkles size={16} /> {generatingMaterial ? "Gemini is writing…" : `Generate ${generatorMode === "flashcards" ? "deck" : "quiz"}`}</button></div>
+            <div className="modal-actions"><button onClick={() => setGeneratorMode(null)} disabled={generatingMaterial}>Cancel</button><button className={`generate-button ${generatorMode === "quiz" ? "green" : generatorMode === "slideshow" ? "orange" : ""}`} onClick={() => void createMaterial()} disabled={generatingMaterial}><WandSparkles size={16} /> {generatingMaterial ? "Gemini is writing…" : `Generate ${generatorMode === "flashcards" ? "deck" : generatorMode === "quiz" ? "quiz" : "slideshow"}`}</button></div>
           </section>
         </div>
       )}
 
       {toast && <div className="toast-message"><Check size={15} />{toast}</div>}
+
+      {presenting && activeSlideshow && activeSlide && (
+        <div className="present-layer" role="dialog" aria-modal="true" aria-label={`${activeSlideshow.title} presentation`}>
+          <div className="present-topbar">
+            <div>
+              <small>{activeNotebook.title}</small>
+              <strong>{activeSlideshow.title}</strong>
+            </div>
+            <span>{slideIndex + 1} / {activeSlideshow.slides.length}</span>
+            <button onClick={() => setPresenting(false)} aria-label="Exit presentation"><Minimize2 size={16} /> Exit <kbd>Esc</kbd></button>
+          </div>
+          <div className="present-canvas">
+            <article className={`present-slide ${activeSlide.kind}-kind`}>
+              <span>{activeSlide.kind === "title" ? "Opening" : activeSlide.kind === "recap" ? "Recap" : `Slide ${slideIndex + 1}`}</span>
+              <h2>{activeSlide.title}</h2>
+              {activeSlide.subtitle ? <p>{activeSlide.subtitle}</p> : null}
+              {activeSlide.bullets.length ? (
+                <ul>{activeSlide.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
+              ) : null}
+            </article>
+          </div>
+          <div className="present-footer">
+            <button onClick={() => moveSlide(-1)} aria-label="Previous slide"><ArrowLeft size={18} /></button>
+            <div className="present-progress" aria-hidden="true"><i style={{ width: `${((slideIndex + 1) / activeSlideshow.slides.length) * 100}%` }} /></div>
+            <button onClick={() => moveSlide(1)} aria-label="Next slide"><ArrowRight size={18} /></button>
+            {showSlideNotes ? <div className="present-notes">{activeSlide.notes}</div> : <small>Press N for speaker notes · arrows to move</small>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

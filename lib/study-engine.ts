@@ -43,6 +43,25 @@ export type QuizSet = {
   bestScore?: number;
 };
 
+export type SlideKind = "title" | "topic" | "recap";
+
+export type Slide = {
+  id: string;
+  kind: SlideKind;
+  title: string;
+  subtitle: string;
+  bullets: string[];
+  notes: string;
+};
+
+export type SlideDeck = {
+  id: string;
+  title: string;
+  focus: string;
+  createdAt: string;
+  slides: Slide[];
+};
+
 export type StudyNotebook = {
   id: string;
   title: string;
@@ -59,10 +78,12 @@ export type StudyNotebook = {
   keyTerms: KeyTerm[];
   flashcardDecks: FlashcardDeck[];
   quizzes: QuizSet[];
+  slideshows: SlideDeck[];
 };
 
 type DeckOptions = { title?: string; count?: number; focus?: string };
 type QuizOptions = { title?: string; count?: number; difficulty?: QuizSet["difficulty"] };
+type SlideOptions = { title?: string; count?: number; focus?: string };
 
 const STOP_WORDS = new Set([
   "about", "after", "again", "against", "also", "among", "because", "been",
@@ -316,6 +337,111 @@ export function generateQuiz(notebook: StudyNotebook, options: QuizOptions = {})
   };
 }
 
+const focusedSections = (notebook: Pick<StudyNotebook, "sections">, focus = "") => {
+  const focusWords = meaningfulWords(focus);
+  if (!focusWords.length) return notebook.sections;
+  const matched = notebook.sections.filter((section) => {
+    const haystack = `${section.title} ${section.overview} ${section.bullets.join(" ")}`.toLowerCase();
+    return focusWords.some((word) => haystack.includes(word));
+  });
+  return matched.length ? matched : notebook.sections;
+};
+
+export function generateSlideshow(notebook: StudyNotebook, options: SlideOptions = {}): SlideDeck {
+  const count = Math.max(4, Math.min(options.count ?? 8, 16));
+  const focus = options.focus?.trim() ?? "";
+  const variant = notebook.slideshows?.length ?? 0;
+  const sections = seededOrder(focusedSections(notebook, focus), 41 + variant * 13);
+  const points = sourceCandidates(notebook, focus);
+  const slides: Slide[] = [];
+  const usedTitles = new Set<string>();
+  const addSlide = (slide: Slide) => {
+    const key = slide.title.replace(/\s+/g, " ").trim().toLowerCase();
+    if (!key || usedTitles.has(key)) return false;
+    usedTitles.add(key);
+    slides.push(slide);
+    return true;
+  };
+
+  addSlide({
+    id: uid("slide"),
+    kind: "title",
+    title: notebook.title,
+    subtitle: clampText(notebook.summary, 220),
+    bullets: unique(notebook.takeaways.slice(0, 3).map((item) => clampText(item, 140))),
+    notes: clampText(`Open with the big picture from ${notebook.sourceName}. ${notebook.summary}`, 320),
+  });
+
+  sections.forEach((section) => {
+    if (slides.length >= count - 1) return;
+    const bullets = unique(section.bullets.map((item) => clampText(item, 180))).slice(0, 4);
+    if (!bullets.length) return;
+    addSlide({
+      id: uid("slide"),
+      kind: "topic",
+      title: section.title,
+      subtitle: clampText(section.overview, 140),
+      bullets,
+      notes: clampText(section.overview, 280),
+    });
+  });
+
+  if (slides.length < count - 1 && notebook.keyTerms.length) {
+    const terms = (focus
+      ? notebook.keyTerms.filter((item) => `${item.term} ${item.context}`.toLowerCase().includes(focus.toLowerCase()))
+      : notebook.keyTerms);
+    const bullets = unique((terms.length ? terms : notebook.keyTerms).slice(0, 5).map((item) =>
+      clampText(`${item.term}: ${item.context}`, 180),
+    ));
+    if (bullets.length) {
+      addSlide({
+        id: uid("slide"),
+        kind: "topic",
+        title: "Key terms",
+        subtitle: "Vocabulary grounded in these notes",
+        bullets,
+        notes: "Pause here and ask the class to define each term before revealing the next slide.",
+      });
+    }
+  }
+
+  seededOrder(points, 23 + variant * 7).forEach((point, index) => {
+    if (slides.length >= count - 1) return;
+    const keyword = topKeywords(point, 2)[index % 2] ?? topKeywords(point, 1)[0];
+    if (!keyword) return;
+    const related = points.filter((candidate) => candidate !== point && candidate.toLowerCase().includes(keyword)).slice(0, 3);
+    const bullets = unique([clampText(point, 180), ...related.map((item) => clampText(item, 180))]).slice(0, 4);
+    if (bullets.length < 2) return;
+    addSlide({
+      id: uid("slide"),
+      kind: "topic",
+      title: titleCase(keyword),
+      subtitle: "",
+      bullets,
+      notes: clampText(`This slide is drawn from the source discussion of ${keyword}.`, 220),
+    });
+  });
+
+  addSlide({
+    id: uid("slide"),
+    kind: "recap",
+    title: "What to remember",
+    subtitle: focus ? `Focus: ${titleCase(focus)}` : "Highest-value points from this notebook",
+    bullets: unique((focus
+      ? points.slice(0, 5)
+      : notebook.takeaways).map((item) => clampText(item, 180))).slice(0, 5),
+    notes: "Close by asking students to restate one takeaway in their own words.",
+  });
+
+  return {
+    id: uid("slides"),
+    title: options.title?.trim() || (focus ? `${titleCase(focus)} Slides` : `Slideshow ${(notebook.slideshows?.length ?? 0) + 1}`),
+    focus: focus || "All notes",
+    createdAt: new Date().toISOString(),
+    slides: slides.slice(0, count),
+  };
+}
+
 export function generateNotebook(
   rawText: string,
   sourceName: string,
@@ -350,10 +476,15 @@ export function generateNotebook(
     keyTerms: createKeyTerms(keywords, points),
     flashcardDecks: [],
     quizzes: [],
+    slideshows: [],
   };
   const firstDeck = generateDeck(notebook, { title: "Core Concepts", count: Math.min(10, Math.max(6, points.length)) });
   notebook.flashcardDecks = [firstDeck];
   notebook.quizzes = [generateQuiz(notebook, { title: "First Practice Quiz", count: Math.min(8, firstDeck.cards.length), difficulty: "Standard" })];
+  notebook.slideshows = [generateSlideshow(notebook, {
+    title: "Class Slideshow",
+    count: Math.min(10, Math.max(6, notebook.sections.length + 2)),
+  })];
   return notebook;
 }
 
@@ -376,7 +507,7 @@ export function buildLocalStudyAnswer(notebook: StudyNotebook, question: string)
   }
   if (/\b(what can you do|how can you help|who are you)\b/.test(conversational) || conversational === "help") {
     return {
-      text: `I’m your Study Coach for ${notebook.title}. I can summarize these notes, explain concepts simply, pull out key terms, quiz you, and help you plan what to review.`,
+      text: `I’m your Study Coach for ${notebook.title}. I can summarize these notes, explain concepts simply, pull out key terms, quiz you, walk through a slideshow, and help you plan what to review.`,
       citations: [],
     };
   }
