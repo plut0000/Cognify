@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpenCheck, Check, LockKeyhole } from "lucide-react";
+import { ArrowLeft, Check, LockKeyhole } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -20,13 +20,19 @@ export default async function LoginPage() {
 
   return (
     <main className="auth-page">
-      <Link className="auth-back" href="/"><ArrowLeft size={17} /> Back home</Link>
+      <Link className="auth-back" href="/">
+        <ArrowLeft size={16} /> Back home
+      </Link>
       <section className="auth-card" aria-labelledby="sign-in-title">
-        <div className="auth-brand"><Image className="brand-logo-image auth-logo" src="/cognify-logo.png" alt="" width={34} height={34} priority /><strong>Cognify</strong></div>
-        <div className="auth-icon"><BookOpenCheck size={28} /></div>
-        <p className="auth-eyebrow">YOUR STUDY SPACE</p>
+        <div className="auth-brand">
+          <Image className="brand-logo-image auth-logo" src="/cognify-logo.png" alt="" width={32} height={32} priority />
+          <strong>Cognify</strong>
+        </div>
+        <p className="auth-eyebrow">Your study space</p>
         <h1 id="sign-in-title">Pick up where you left off.</h1>
-        <p className="auth-copy">Sign in with Google to open your private study workspace and keep your AI coach protected.</p>
+        <p className="auth-copy">
+          Sign in with Google to open your private study workspace and keep your AI coach protected.
+        </p>
         {authReady ? (
           <form action={loginWithGoogle}>
             <button className="google-button" type="submit">
