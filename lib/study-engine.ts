@@ -337,6 +337,9 @@ export function generateQuiz(notebook: StudyNotebook, options: QuizOptions = {})
   };
 }
 
+const samePoint = (left: string, right: string) =>
+  left.replace(/\s+/g, " ").trim().toLowerCase() === right.replace(/\s+/g, " ").trim().toLowerCase();
+
 const focusedSections = (notebook: Pick<StudyNotebook, "sections">, focus = "") => {
   const focusWords = meaningfulWords(focus);
   if (!focusWords.length) return notebook.sections;
@@ -374,13 +377,15 @@ export function generateSlideshow(notebook: StudyNotebook, options: SlideOptions
 
   sections.forEach((section) => {
     if (slides.length >= count - 1) return;
-    const bullets = unique(section.bullets.map((item) => clampText(item, 180))).slice(0, 4);
-    if (!bullets.length) return;
+    const subtitle = clampText(section.overview, 140);
+    const bullets = unique(section.bullets.map((item) => clampText(item, 180)))
+      .filter((item) => !samePoint(item, subtitle))
+      .slice(0, 4);
     addSlide({
       id: uid("slide"),
       kind: "topic",
       title: section.title,
-      subtitle: clampText(section.overview, 140),
+      subtitle,
       bullets,
       notes: clampText(section.overview, 280),
     });
