@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     default: "Cognify — Learn from your own notes",
     template: "%s · Cognify",
   },
-  description: "Upload PDFs and class notes, get clear summaries, generate flashcards and quizzes, and study with a source-grounded Gemini coach.",
+  description: "Upload PDFs and class notes, get clear summaries, generate flashcards, quizzes, and slideshows, and study with a source-grounded Gemini coach.",
   icons: {
     icon: "/cognify-logo.png",
     shortcut: "/cognify-logo.png",

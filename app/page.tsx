@@ -6,6 +6,7 @@ import {
   Layers3,
   ListChecks,
   MessageCircle,
+  Presentation,
   ShieldCheck,
   UploadCloud,
 } from "lucide-react";
@@ -30,7 +31,7 @@ const steps = [
     number: "03",
     icon: Layers3,
     title: "Practice until it sticks",
-    copy: "Create multiple flashcard decks and quizzes, then ask your grounded AI coach.",
+    copy: "Create flashcard decks, quizzes, and slideshows, then ask your grounded AI coach.",
   },
 ];
 
@@ -66,7 +67,7 @@ export default async function LandingPage() {
           <p className="hero-kicker">Your notes, finally useful</p>
           <h1>Turn class notes into <em>study sessions</em> that work.</h1>
           <p>
-            Upload a PDF, get the important ideas, build as many flashcard decks and quizzes as you need, and ask a Gemini-powered coach that stays grounded in your source.
+            Upload a PDF, get the important ideas, build flashcard decks, quizzes, and slideshows, and ask a Gemini-powered coach that stays grounded in your source.
           </p>
           <div className="hero-actions">
             <Link className="hero-primary" href={primaryHref}>
@@ -116,6 +117,7 @@ export default async function LandingPage() {
               <span>Notes</span>
               <span>Flashcards</span>
               <span>Quizzes</span>
+              <span>Slideshows</span>
             </div>
             <div className="showcase-summary">
               <small>Notebook summary</small>
@@ -130,6 +132,7 @@ export default async function LandingPage() {
             <div className="showcase-tools">
               <div><Layers3 size={15} /><span><strong>Flashcards</strong><small>12 cards ready</small></span></div>
               <div><ListChecks size={15} /><span><strong>Practice quiz</strong><small>10 questions</small></span></div>
+              <div><Presentation size={15} /><span><strong>Slideshow</strong><small>8 slides</small></span></div>
             </div>
           </div>
           <div className="showcase-coach">
@@ -184,6 +187,10 @@ export default async function LandingPage() {
           <li>
             <ListChecks size={18} />
             <span><strong>Multiple practice quizzes</strong><small>Change length and difficulty each time.</small></span>
+          </li>
+          <li>
+            <Presentation size={18} />
+            <span><strong>Notebook slideshows</strong><small>Present your notes as a lecture deck.</small></span>
           </li>
           <li>
             <MessageCircle size={18} />

@@ -5,7 +5,7 @@
 <h1 align="center">Cognify</h1>
 
 <p align="center">
-  An open-source AI study workspace that turns notes into grounded summaries, flashcards, quizzes, and tutoring.
+  An open-source AI study workspace that turns notes into grounded summaries, flashcards, quizzes, slideshows, and tutoring.
 </p>
 
 <p align="center">
@@ -35,6 +35,7 @@ Cognify is also intended to be a reusable reference for developers building educ
 - Generate structured summaries, key ideas, sections, and terminology.
 - Create multiple flashcard decks from the same notebook.
 - Create multiple quizzes with selectable difficulty and question count.
+- Turn a notebook into a presentable slideshow with speaker notes and keyboard navigation.
 - Reduce repeated facts and answers across newly generated study sets.
 - Chat with a study coach grounded in the active notebook.
 - Sign in securely with Google OAuth.
@@ -46,7 +47,7 @@ Cognify is also intended to be a reusable reference for developers building educ
 2. Cognify extracts and structures the source material.
 3. Server-side AI routes generate grounded study content.
 4. Previously generated material is supplied as history to reduce repetition.
-5. The student reviews cards, completes quizzes, or asks the study coach questions.
+5. The student reviews cards, presents slides, completes quizzes, or asks the study coach questions.
 
 ## Technology
 
@@ -114,6 +115,7 @@ Never commit `.env.local`, API keys, OAuth secrets, or user study documents.
 - [x] Grounded study chatbot
 - [x] PDF and text-note ingestion
 - [x] Multiple flashcard decks and quiz sets
+- [x] Slideshow decks generated from the active notebook
 - [x] Cross-set repetition reduction
 - [x] Google authentication
 - [ ] Optional OpenAI model provider
