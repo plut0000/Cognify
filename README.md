@@ -97,6 +97,12 @@ For production, add your deployed domain in Google Cloud:
 https://YOUR-DOMAIN/api/auth/callback/google
 ```
 
+Until a custom domain is attached, use the current Vercel origin:
+
+```text
+https://cognify-alpha.vercel.app/api/auth/callback/google
+```
+
 ## Environment variables
 
 | Variable | Purpose |
@@ -107,6 +113,7 @@ https://YOUR-DOMAIN/api/auth/callback/google
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 | `AUTH_TRUST_HOST` | Set to `true` on Vercel |
+| `NEXT_PUBLIC_SITE_URL` | Canonical public origin, with protocol and no trailing slash. Defaults to `https://cognify-alpha.vercel.app` when unset. After attaching a custom domain, set this to that origin and redeploy so canonical tags, Open Graph URLs, sitemap, robots, and `llms.txt` match. |
 
 Never commit `.env.local`, API keys, OAuth secrets, or user study documents.
 
