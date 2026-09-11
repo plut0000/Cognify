@@ -107,6 +107,7 @@ https://cognify-alpha.vercel.app/api/auth/callback/google
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 | `AUTH_TRUST_HOST` | Set to `true` on Vercel |
+| `AUTH_URL` | Optional. Canonical origin Auth.js should use in production, e.g. `https://cognify-alpha.vercel.app`. Leave unset for local and preview deploys. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical public origin used for metadata, sitemap, robots, and `llms.txt`. Set to `https://cognify-alpha.vercel.app` (no trailing slash). That is the live site URL; a custom domain is not required. |
 
 Never commit `.env.local`, API keys, OAuth secrets, or user study documents.

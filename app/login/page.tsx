@@ -1,12 +1,16 @@
 import { ArrowLeft, Check, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/auth";
-import { loginWithGoogle } from "@/app/auth-actions";
+import GoogleSignInForm, { SignInError } from "@/components/google-sign-in-form";
 import Breadcrumbs from "@/components/breadcrumbs";
 import { BrandLogo } from "@/components/site-chrome";
 import { pageMetadata } from "@/lib/site-config";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Sign in",
@@ -15,7 +19,19 @@ export const metadata: Metadata = pageMetadata({
   index: false,
 });
 
-export default async function LoginPage() {
+function firstQueryValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>;
+}) {
+  await connection();
+  const params = await searchParams;
+  const error = firstQueryValue(params.error);
   const authReady = Boolean(
     process.env.AUTH_SECRET
       && process.env.AUTH_GOOGLE_ID
@@ -40,13 +56,11 @@ export default async function LoginPage() {
         <p className="auth-copy">
           Sign in with Google to open your private study workspace and keep your AI coach protected.
         </p>
+        <Suspense fallback={null}>
+          <SignInError error={error} />
+        </Suspense>
         {authReady ? (
-          <form action={loginWithGoogle}>
-            <button className="google-button" type="submit">
-              <span className="google-mark" aria-hidden="true">G</span>
-              Continue with Google
-            </button>
-          </form>
+          <GoogleSignInForm />
         ) : (
           <>
             <button className="google-button" type="button" disabled>
