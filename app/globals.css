@@ -1026,6 +1026,7 @@ a:focus-visible {
 .auth-eyebrow { margin: 32px 0 10px; color: var(--faint); font: 600 12px/1 var(--font-sans); letter-spacing: .1em; text-transform: uppercase; }
 .auth-card h1 { margin: 0; font-family: var(--font-serif); font-size: 32px; font-weight: 500; line-height: 1.1; letter-spacing: -.03em; }
 .auth-copy { margin: 14px 0 24px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.auth-alert { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--red-line); border-radius: var(--radius); background: var(--red-soft); color: var(--red); font-size: 13px; line-height: 1.55; }
 .google-button { width: 100%; height: 48px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer; }
 .google-button:hover { border-color: var(--ink); }
 .google-button:disabled { border-color: var(--line); background: var(--soft); color: var(--faint); cursor: not-allowed; }
