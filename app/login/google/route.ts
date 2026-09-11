@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
+import { authContinuePage, copySetCookies } from "@/lib/auth-continue-page";
 
 export const dynamic = "force-dynamic";
 
 function cookiePairs(response: Response) {
   return response.headers.getSetCookie().map((cookie) => cookie.split(";")[0]?.trim() ?? "");
-}
-
-function copySetCookies(from: Response, to: NextResponse) {
-  for (const cookie of from.headers.getSetCookie()) {
-    to.headers.append("Set-Cookie", cookie);
-  }
 }
 
 function isGoogleAuthorizationUrl(value: string) {
@@ -25,7 +20,7 @@ function redirectToLogin(origin: string, error: string) {
   return NextResponse.redirect(new URL(`/login?error=${error}`, origin));
 }
 
-export async function GET(request: Request) {
+async function startGoogleSignIn(request: Request) {
   const origin = new URL(request.url).origin;
 
   try {
@@ -65,40 +60,38 @@ export async function GET(request: Request) {
     if (!isGoogleAuthorizationUrl(nextUrl)) {
       return redirectToLogin(origin, "Configuration");
     }
-    const googleUrl = nextUrl;
 
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Continue to Google · Cognify</title>
-  <style>
-    body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: #f3efe6; color: #16191f; font: 15px/1.5 "IBM Plex Sans", sans-serif; }
-    p { margin: 0; color: #5c6168; }
-  </style>
-</head>
-<body>
-  <p>Continuing to Google…</p>
-  <script>location.replace(${JSON.stringify(googleUrl)})</script>
-  <noscript><a href=${JSON.stringify(googleUrl)}>Continue to Google</a></noscript>
-</body>
-</html>`;
-
-    const response = new NextResponse(html, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "private, no-store",
-        "Referrer-Policy": "no-referrer",
-        "X-Robots-Tag": "noindex, nofollow",
+    const response = new NextResponse(
+      authContinuePage({
+        href: nextUrl,
+        title: "Continue to Google · Cognify",
+        heading: "Continue to Google",
+        copy: "Tap once more so Safari can keep the sign-in cookie on this site, then choose your Google account.",
+        button: "Continue to Google",
+        autoRedirect: false,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "private, no-store",
+          "Referrer-Policy": "no-referrer",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
       },
-    });
+    );
     copySetCookies(csrfResponse, response);
     copySetCookies(signInResponse, response);
     return response;
   } catch {
     return redirectToLogin(origin, "OAuthSignin");
   }
+}
+
+export function GET(request: Request) {
+  return startGoogleSignIn(request);
+}
+
+export function POST(request: Request) {
+  return startGoogleSignIn(request);
 }
