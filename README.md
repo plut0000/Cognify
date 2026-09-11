@@ -91,10 +91,10 @@ Use this local Google OAuth callback URL:
 http://localhost:3000/api/auth/callback/google
 ```
 
-For production, add your deployed domain in Google Cloud:
+For production, add the live Vercel origin in Google Cloud:
 
 ```text
-https://YOUR-DOMAIN/api/auth/callback/google
+https://cognify-alpha.vercel.app/api/auth/callback/google
 ```
 
 ## Environment variables
@@ -107,6 +107,7 @@ https://YOUR-DOMAIN/api/auth/callback/google
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 | `AUTH_TRUST_HOST` | Set to `true` on Vercel |
+| `NEXT_PUBLIC_SITE_URL` | Canonical public origin used for metadata, sitemap, robots, and `llms.txt`. Set to `https://cognify-alpha.vercel.app` (no trailing slash). That is the live site URL; a custom domain is not required. |
 
 Never commit `.env.local`, API keys, OAuth secrets, or user study documents.
 

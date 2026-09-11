@@ -1,13 +1,19 @@
 import { ArrowLeft, Check, LockKeyhole } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { loginWithGoogle } from "@/app/auth-actions";
+import Breadcrumbs from "@/components/breadcrumbs";
+import { BrandLogo } from "@/components/site-chrome";
+import { pageMetadata } from "@/lib/site-config";
 
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Sign in",
-};
+  description: "Sign in to Cognify with Google to open your private study workspace and continue from your saved notes.",
+  path: "/login",
+  index: false,
+});
 
 export default async function LoginPage() {
   const authReady = Boolean(
@@ -19,13 +25,14 @@ export default async function LoginPage() {
   if (session?.user) redirect("/study");
 
   return (
-    <main className="auth-page">
+    <main id="main-content" className="auth-page">
       <Link className="auth-back" href="/">
         <ArrowLeft size={16} /> Back home
       </Link>
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Sign in" }]} />
       <section className="auth-card" aria-labelledby="sign-in-title">
         <div className="auth-brand">
-          <Image className="brand-logo-image auth-logo" src="/cognify-logo.png" alt="" width={32} height={32} priority />
+          <BrandLogo className="auth-logo" size={32} priority />
           <strong>Cognify</strong>
         </div>
         <p className="auth-eyebrow">Your study space</p>
@@ -53,7 +60,9 @@ export default async function LoginPage() {
           <span><Check size={15} /> No password to remember</span>
           <span><LockKeyhole size={15} /> Your Gemini key stays server-side</span>
         </div>
-        <p className="auth-legal">By continuing, you agree to use Cognify for learning and personal study.</p>
+        <p className="auth-legal">
+          By continuing, you agree to use Cognify for learning and personal study. Read the <Link href="/privacy">privacy overview</Link>.
+        </p>
       </section>
     </main>
   );
