@@ -31,9 +31,11 @@ export function SignInError({ error }: { error?: string | null }) {
 
 export default function GoogleSignInForm() {
   return (
-    <a className="google-button" href="/login/google">
-      <span className="google-mark" aria-hidden="true">G</span>
-      Continue with Google
-    </a>
+    <form action="/login/google" method="post">
+      <button className="google-button" type="submit">
+        <span className="google-mark" aria-hidden="true">G</span>
+        Continue with Google
+      </button>
+    </form>
   );
 }
