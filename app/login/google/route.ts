@@ -27,11 +27,9 @@ function redirectToLogin(origin: string, error: string) {
 
 export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
-  const incomingCookies = request.headers.get("cookie") ?? "";
 
   try {
     const csrfResponse = await fetch(new URL("/api/auth/csrf", origin), {
-      headers: { cookie: incomingCookies },
       cache: "no-store",
     });
     if (!csrfResponse.ok) {
@@ -49,7 +47,7 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         "X-Auth-Return-Redirect": "1",
-        cookie: [incomingCookies, ...cookiePairs(csrfResponse)].filter(Boolean).join("; "),
+        cookie: cookiePairs(csrfResponse).filter(Boolean).join("; "),
       },
       body: new URLSearchParams({
         csrfToken,
@@ -60,10 +58,14 @@ export async function GET(request: Request) {
     });
 
     const payload = (await signInResponse.json().catch(() => null)) as { url?: string } | null;
-    const googleUrl = payload?.url || signInResponse.headers.get("location") || "";
-    if (!isGoogleAuthorizationUrl(googleUrl)) {
+    const nextUrl = payload?.url || signInResponse.headers.get("location") || "";
+    if (nextUrl.startsWith(`${origin}/login`)) {
+      return NextResponse.redirect(nextUrl);
+    }
+    if (!isGoogleAuthorizationUrl(nextUrl)) {
       return redirectToLogin(origin, "Configuration");
     }
+    const googleUrl = nextUrl;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
