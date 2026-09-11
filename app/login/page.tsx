@@ -1,7 +1,9 @@
 import { ArrowLeft, Check, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import GoogleSignInForm, { SignInError } from "@/components/google-sign-in-form";
 import Breadcrumbs from "@/components/breadcrumbs";
@@ -17,12 +19,19 @@ export const metadata: Metadata = pageMetadata({
   index: false,
 });
 
+function firstQueryValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string | string[] }>;
 }) {
-  const { error } = await searchParams;
+  await connection();
+  const params = await searchParams;
+  const error = firstQueryValue(params.error);
   const authReady = Boolean(
     process.env.AUTH_SECRET
       && process.env.AUTH_GOOGLE_ID
@@ -47,7 +56,9 @@ export default async function LoginPage({
         <p className="auth-copy">
           Sign in with Google to open your private study workspace and keep your AI coach protected.
         </p>
-        <SignInError error={error} />
+        <Suspense fallback={null}>
+          <SignInError error={error} />
+        </Suspense>
         {authReady ? (
           <GoogleSignInForm />
         ) : (

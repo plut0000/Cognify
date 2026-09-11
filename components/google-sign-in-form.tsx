@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 const AUTH_ERROR_COPY: Record<string, string> = {
   Configuration:
@@ -16,11 +17,13 @@ const AUTH_ERROR_COPY: Record<string, string> = {
   Default: "Sign-in did not finish. Refresh this page and try again.",
 };
 
-export function SignInError({ error }: { error?: string }) {
-  if (!error) return null;
-  const message = AUTH_ERROR_COPY[error] ?? AUTH_ERROR_COPY.Default;
+export function SignInError({ error }: { error?: string | null }) {
+  const searchParams = useSearchParams();
+  const code = error || searchParams.get("error");
+  if (!code) return null;
+  const message = AUTH_ERROR_COPY[code] ?? AUTH_ERROR_COPY.Default;
   return (
-    <p className="auth-alert" role="alert">
+    <p className="auth-alert" role="alert" data-auth-error={code}>
       {message}
     </p>
   );
